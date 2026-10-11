@@ -1,0 +1,2 @@
+# Unified diff context requires leading spaces and blank context lines.
+build/*.patch -whitespace
