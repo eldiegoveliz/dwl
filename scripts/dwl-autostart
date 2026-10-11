@@ -1,0 +1,16 @@
+#!/bin/sh
+set -eu
+exec </dev/null
+dbus-update-activation-environment --systemd \
+    WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_DESKTOP XDG_SESSION_TYPE || true
+wallpaper=${DWL_WALLPAPER:-$HOME/wallpapers/mountain-river-green-aesthetic-desktop-wallpaper.jpg}
+if [ -r "$wallpaper" ]; then
+    swaybg -i "$wallpaper" -m fill &
+fi
+if command -v dunst >/dev/null 2>&1 && ! pgrep -x dunst >/dev/null 2>&1; then
+    dunst &
+fi
+if [ -x /usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1 ]; then
+    /usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1 &
+fi
+wait

@@ -1,0 +1,10 @@
+dwl
+check-bindings
+*.o
+*-protocol.c
+*-protocol.h
+.ccls-cache
+src/
+pkg/
+*.pkg.tar.*
+__pycache__/

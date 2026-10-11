@@ -1,0 +1,21 @@
+#!/bin/sh
+set -eu
+outputs=$(wlr-randr --json)
+internal=$(printf '%s\n' "$outputs" | jq -r '[.[] | select(.name | startswith("eDP-"))][0].name // empty')
+[ -n "$internal" ] || { printf 'No internal eDP output found.\n' >&2; exit 1; }
+enabled=$(printf '%s\n' "$outputs" | jq -r --arg name "$internal" '.[] | select(.name == $name) | .enabled')
+count=$(printf '%s\n' "$outputs" | jq '[.[] | select(.enabled)] | length')
+if [ "$enabled" = true ]; then
+    if [ "$count" -le 1 ]; then
+        notify-send 'Display unchanged' 'The internal screen is the only enabled output.' 2>/dev/null || true
+        exit 1
+    fi
+    wlr-randr --output "$internal" --off
+else
+    external=$(printf '%s\n' "$outputs" | jq -r --arg name "$internal" '[.[] | select(.enabled and .name != $name)][0].name // empty')
+    if [ -n "$external" ]; then
+        wlr-randr --output "$internal" --on --pos 0,0 --output "$external" --right-of "$internal"
+    else
+        wlr-randr --output "$internal" --on --pos 0,0
+    fi
+fi

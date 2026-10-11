@@ -1,0 +1,37 @@
+#!/bin/sh
+set -eu
+runtime_dir=$(mktemp -d "${XDG_RUNTIME_DIR:?XDG_RUNTIME_DIR is not set}/dwl-session.XXXXXX")
+export DWL_STATUS_FIFO=$runtime_dir/status
+export DWL_STATUS_PID_FILE=$runtime_dir/status.pid
+export XDG_CURRENT_DESKTOP=dwl XDG_SESSION_DESKTOP=dwl XDG_SESSION_TYPE=wayland
+export QT_QPA_PLATFORM=wayland GDK_BACKEND=wayland MOZ_ENABLE_WAYLAND=1
+unset DISPLAY XAUTHORITY
+
+cleanup()
+{
+    if [ -r "$DWL_STATUS_PID_FILE" ]; then
+        status_pid=$(cat "$DWL_STATUS_PID_FILE")
+        case $status_pid in
+            *[!0-9]*|'') ;;
+            *)
+                if [ "$(readlink "/proc/$status_pid/fd/1" 2>/dev/null || true)" = "$DWL_STATUS_FIFO" ]; then
+                    kill "$status_pid" 2>/dev/null || true
+                fi
+                ;;
+        esac
+    fi
+    rm -f "$DWL_STATUS_PID_FILE" "$DWL_STATUS_FIFO" "$runtime_dir/status.log"
+    rmdir "$runtime_dir" 2>/dev/null || true
+}
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+mkfifo -m 600 "$DWL_STATUS_FIFO"
+# Keep the FIFO open while switching between full and compact status producers.
+exec 3<>"$DWL_STATUS_FIFO"
+/usr/share/dwl/scripts/dwl-status-mode full
+set +e
+/usr/bin/dwl -s /usr/share/dwl/scripts/dwl-autostart <"$DWL_STATUS_FIFO"
+result=$?
+set -e
+exit "$result"
