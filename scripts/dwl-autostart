@@ -1,16 +1,16 @@
 #!/bin/sh
 set -eu
+# Consume dwl's status pipe before starting programs that might read stdin.
+cat <&0 > "$DWL_INFO" &
+reader=$!
 exec </dev/null
-dbus-update-activation-environment --systemd \
-    WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_DESKTOP XDG_SESSION_TYPE || true
-wallpaper=${DWL_WALLPAPER:-$HOME/wallpapers/mountain-river-green-aesthetic-desktop-wallpaper.jpg}
-if [ -r "$wallpaper" ]; then
-    swaybg -i "$wallpaper" -m fill &
-fi
-if command -v dunst >/dev/null 2>&1 && ! pgrep -x dunst >/dev/null 2>&1; then
-    dunst &
-fi
+systemctl --user unset-environment DISPLAY XAUTHORITY
+dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP \
+    XDG_SESSION_DESKTOP XDG_SESSION_TYPE PATH DWL_INFO DWL_CONFIG_DIR
+systemctl --user restart darkman.service
+systemctl --user stop dunst.service 2>/dev/null || true
+systemctl --user restart dwl-bar.service dwl-notifications.service dwl-wallpaper.service
 if [ -x /usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1 ]; then
     /usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1 &
 fi
-wait
+wait "$reader"

@@ -1,36 +1,14 @@
 #!/bin/sh
 set -eu
-status_fifo=${DWL_STATUS_FIFO:?This command must run inside the dwl session}
-pid_file=${DWL_STATUS_PID_FILE:?This command must run inside the dwl session}
 case ${1:-} in
-    full) producer=slstatus ;;
-    mini) producer=slstatus-mini ;;
-    clock) producer= ;;
-    *) printf 'usage: %s full|mini|clock\n' "$0" >&2; exit 2 ;;
+    full|mini)
+        printf '%s\n' "$1" > "$XDG_RUNTIME_DIR/dwl/bar-mode"
+        exec systemctl --user restart dwl-bar.service ;;
+    toggle)
+        if systemctl --user is-active --quiet dwl-bar.service; then
+            exec systemctl --user stop dwl-bar.service
+        else
+            exec systemctl --user start dwl-bar.service
+        fi ;;
+    *) exit 2 ;;
 esac
-if [ -r "$pid_file" ]; then
-    old_pid=$(cat "$pid_file")
-    case $old_pid in
-        *[!0-9]*|'') ;;
-        *)
-            if [ "$(readlink "/proc/$old_pid/fd/1" 2>/dev/null || true)" = "$status_fifo" ]; then
-                kill "$old_pid" 2>/dev/null || true
-                for attempt in 1 2 3 4 5 6 7 8 9 10; do
-                    kill -0 "$old_pid" 2>/dev/null || break
-                    sleep 0.05
-                done
-                if kill -0 "$old_pid" 2>/dev/null; then
-                    printf 'Previous status producer did not stop.\n' >&2
-                    exit 1
-                fi
-            fi
-            ;;
-    esac
-fi
-if [ -n "$producer" ] && command -v "$producer" >/dev/null 2>&1; then
-    # -s writes to stdout and does not connect to an X server.
-    "$producer" -s >"$status_fifo" 2>"${pid_file%/*}/status.log" &
-else
-    (while :; do date '+%a %d %H:%M'; sleep 2; done) >"$status_fifo" &
-fi
-printf '%s\n' "$!" >"$pid_file"

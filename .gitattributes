@@ -1,4 +1,0 @@
-# Patch context lines need their leading space and may contain tabs.
-patches/*.patch -whitespace
-# Upstream Markdown uses two trailing spaces for explicit line breaks.
-README.md whitespace=-blank-at-eol

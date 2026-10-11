@@ -1,0 +1,114 @@
+# Palette, output, and status path are filled by scripts/dwl-bar.
+bar:
+  height: 34
+  location: top
+  layer: top
+  monitor: ${monitor}
+  background: ${background}
+  foreground: ${foreground}
+  font: GeistMono Nerd Font:size=10
+  spacing: 12
+  margin: 12
+  left:
+    - dwl:
+        number-of-tags: 9
+        dwl-info-filename: ${dwl_info}
+        content:
+          map:
+            conditions:
+              id == 0:
+                string:
+                  text: "  {layout}  {title}"
+                  max: 24
+              urgent:
+                string: {text: " {id} ", foreground: "${urgent}"}
+              selected:
+                string:
+                  text: " {id} "
+                  foreground: ${accent}
+                  deco:
+                    underline: {size: 2, color: "${accent}"}
+              ~empty:
+                string: {text: " {id} "}
+            default:
+              string: {text: " {id} ", foreground: "${muted}"}
+  center:
+    - clock:
+        time-format: "%H:%M"
+        date-format: "%a %d %b"
+        content:
+          string:
+            text: "{date}  {time}"
+            on-click: dwl-bar-action calendar
+  right:
+    - cpu:
+        poll-interval: 2500
+        content:
+          map:
+            conditions:
+              id < 0:
+                string:
+                  text: "${cpu_text}"
+                  foreground: ${muted}
+                  on-click: dwl-bar-action system
+    - mem:
+        poll-interval: 2500
+        content:
+          string:
+            text: "${memory_text}"
+            foreground: ${muted}
+            on-click: dwl-bar-action system
+    - network:
+        poll-interval: 0
+        content:
+          map:
+            conditions:
+              name == "${wifi_interface}":
+                map:
+                  conditions:
+                    carrier:
+                      string:
+                        text: " {ssid}"
+                        max: 14
+                        on-click: dwl-bar-action network
+                  default:
+                    string:
+                      text: " offline"
+                      foreground: ${muted}
+                      on-click: dwl-bar-action network
+    - pulse:
+        content:
+          map:
+            on-click:
+              left: pavucontrol
+              middle: wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle
+              wheel-up: wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+
+              wheel-down: wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-
+            conditions:
+              sink_muted:
+                string: {text: "󰝟 muted", foreground: "${muted}"}
+            default:
+              string: {text: " {sink_percent}%"}
+    - battery:
+        name: BAT0
+        poll-interval: 30000
+        content: &battery
+          map:
+            on-click: dwl-bar-action battery
+            conditions:
+              capacity < 15:
+                string: {text: "{name} {capacity}%", foreground: "${urgent}"}
+              state == charging:
+                string: {text: " {name} {capacity}%", foreground: "${accent}"}
+            default:
+              string: {text: "{name} {capacity}%"}
+    - battery:
+        name: BAT1
+        poll-interval: 30000
+        content: *battery
+    - label:
+        content:
+          string:
+            text: "󰔎"
+            foreground: ${accent}
+            on-click: dwl-bar-action theme

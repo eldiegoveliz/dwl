@@ -1,0 +1,7 @@
+#!/bin/sh
+set -eu
+config=${DWL_CONFIG_DIR:-$HOME/.config/dwl}
+mode=$(darkman get 2>/dev/null || printf dark)
+case "$mode" in light) ;; *) mode=dark ;; esac
+cat "$config/dunst/dunstrc" "$config/dunst/$mode.conf" > "$XDG_RUNTIME_DIR/dwl/dunstrc"
+exec dunst -conf "$XDG_RUNTIME_DIR/dwl/dunstrc"

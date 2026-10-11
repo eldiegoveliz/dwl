@@ -1,0 +1,10 @@
+#!/bin/sh
+set -eu
+case ${1:-} in dark|light) ;; *) exit 2 ;; esac
+config=${DWL_CONFIG_DIR:-$HOME/.config/dwl}
+# Leave other desktop sessions to their existing darkman handlers.
+if systemctl --user is-active --quiet dwl-notifications.service; then
+    cat "$config/dunst/dunstrc" "$config/dunst/$1.conf" > "$XDG_RUNTIME_DIR/dwl/dunstrc"
+    dunstctl reload "$XDG_RUNTIME_DIR/dwl/dunstrc"
+fi
+systemctl --user try-restart dwl-bar.service dwl-wallpaper.service

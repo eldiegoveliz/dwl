@@ -1,0 +1,10 @@
+#!/bin/sh
+set -eu
+mode=$(darkman get 2>/dev/null || printf dark)
+config=${DWL_CONFIG_DIR:-$HOME/.config/dwl}
+. "$config/wallpaper.conf"
+case "$mode" in light) image=$light ;; *) image=$dark ;; esac
+if [ -f "$image" ]; then
+    exec swaybg --image "$image" --mode fill
+fi
+exec swaybg --color '#20262d'

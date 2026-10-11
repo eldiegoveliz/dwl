@@ -1,0 +1,6 @@
+[Unit]
+Description=Yambar for stock dwl
+
+[Service]
+ExecStart=%h/.config/dwl/scripts/dwl-bar
+Restart=on-failure

@@ -1,0 +1,17 @@
+#!/bin/sh
+set -eu
+config=${DWL_CONFIG_DIR:-$HOME/.config/dwl}
+case ${1:-} in
+    system) exec "$config/scripts/dwl-terminal" htop ;;
+    network) exec "$config/scripts/dwl-terminal" iwctl ;;
+    calendar)
+        if command -v calcurse >/dev/null 2>&1; then
+            exec "$config/scripts/dwl-terminal" calcurse
+        fi
+        exec "$config/scripts/dwl-terminal" sh -c 'cal; read -r reply' ;;
+    battery) exec "$config/scripts/dwl-terminal" sh -c 'upower -d; printf "\nPress Enter to close."; read -r reply' ;;
+    theme)
+        mode=$(darkman get)
+        case "$mode" in light) exec darkman set dark ;; *) exec darkman set light ;; esac ;;
+    *) exit 2 ;;
+esac

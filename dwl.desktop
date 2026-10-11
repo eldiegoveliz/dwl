@@ -1,6 +1,6 @@
 [Desktop Entry]
 Name=dwl
-Comment=Dynamic Wayland compositor
-Exec=/usr/bin/dwl-session
+Comment=Stock dwl with personal configuration
+Exec=@CONFIG_DIR@/scripts/dwl-session
 Type=Application
 DesktopNames=dwl
