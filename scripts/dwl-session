@@ -9,7 +9,8 @@ unset DISPLAY XAUTHORITY
 mkdir -p "$XDG_RUNTIME_DIR/dwl"
 : > "$DWL_INFO"
 cleanup() {
-    systemctl --user stop dwl-bar.service dwl-notifications.service dwl-wallpaper.service
+    systemctl --user stop dwl-bar.service dwl-notifications.service dwl-wallpaper.service \
+        dwl-terminal.service dwl-monitors.service
     systemctl --user unset-environment WAYLAND_DISPLAY DWL_INFO DWL_CONFIG_DIR
 }
 trap cleanup EXIT

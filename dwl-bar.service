@@ -1,5 +1,5 @@
 [Unit]
-Description=Yambar for stock dwl
+Description=Glass Yambar for dwl
 
 [Service]
 ExecStart=%h/.config/dwl/scripts/dwl-bar

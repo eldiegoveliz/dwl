@@ -1,6 +1,6 @@
 #!/bin/sh
 set -eu
-mode=$(darkman get 2>/dev/null || printf dark)
+mode=${DWL_THEME:-$(darkman get 2>/dev/null || printf dark)}
 config=${DWL_CONFIG_DIR:-$HOME/.config/dwl}
 . "$config/wallpaper.conf"
 case "$mode" in light) image=$light ;; *) image=$dark ;; esac

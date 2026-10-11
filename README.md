@@ -1,51 +1,61 @@
-# dwl configuration
+# Personal dwl desktop
 
-Personal configuration for [upstream dwl](https://codeberg.org/dwl/dwl), with
-Yambar, Kitty, Dunst, wmenu, and darkman. Compositor source, patches, and build
-artifacts are outside this repository.
+Native Wayland with Foot, Yambar, Fuzzel, Mako, Kanshi, and darkman. Terminals,
+the bar, launcher, and notifications share a palette and use real background
+blur. Blur samples the cached wallpaper to keep GPU work modest.
 
-The installed dwl is the upstream 0.9 release with this `config.h` compiled in.
-XWayland is disabled. Nine tags, tile, floating, and monocle layouts use Super
-shortcuts and a Latin American keyboard layout. Firefox starts on the current tag.
+This repository contains configuration, session helpers, an installer, and one
+86-line patch for layer-surface blur. Upstream compositor source and downloaded
+community patches stay in `~/.cache/dwl-config-install/rice`.
 
-Yambar reads dwl's standard status output through its
-[native dwl module](https://codeberg.org/dnkl/yambar/src/branch/master/doc/yambar-modules-dwl.5.scd).
-The bar has live tags and titles, a clock, CPU and memory usage, Wi-Fi, audio,
-both batteries, and a theme button. Each enabled monitor gets a bar.
-Darkman changes the bar, notifications, and wallpaper; new Kitty windows use
-the current palette. Existing Kitty windows keep their launch palette.
+## Configuration
 
-Stock dwl has no window gaps or built-in bar. Tags use keyboard shortcuts.
-Yambar does not provide the previous Waybar hover tooltips or tray.
-Status items open tools on click, and the audio item supports scrolling.
-
-| File | Purpose |
+| File | Controls |
 | --- | --- |
-| `config.h` | Compiled dwl shortcuts, rules, colors, and input settings |
-| `yambar/config.yml` | Bar layout, labels, and click actions |
-| `scripts/dwl-bar` | Bar palettes and monitor startup |
-| `kitty/` | Terminal settings and palettes |
-| `dunst/` | Notification settings and palettes |
-| `wallpaper.conf` | Editable wallpaper paths |
-| `scripts/` | Session startup, screenshots, display control, and theme actions |
-| `*.service`, `dwl.desktop` | Session and user-service configuration |
-| `install.sh` | Upstream package build and configuration links |
+| `theme/dark.conf`, `theme/light.conf` | Shared colors and transparency |
+| `config.h` | Shortcuts, layouts, touchpad, gaps, and blur strength |
+| `foot/foot.ini` | Terminal font, padding, cursor, and scrollback |
+| `yambar/config.yml` | Tags, clock, audio, network, and combined battery indicator |
+| `fuzzel/fuzzel.ini` | Application launcher |
+| `mako/config` | Notifications and grouped volume/brightness feedback |
+| `kanshi/config` | Docked, laptop, and extended monitor profiles |
+| `wallpaper.conf` | Dark and light wallpaper paths |
+
+Darkman switches the bar, launcher, notifications, wallpaper, and open Foot
+windows. The default bar hides CPU/RAM; full mode restores them. Battery status
+combines both packs by stored energy rather than averaging their percentages.
+
+## Shortcuts
 
 | Shortcut | Action |
 | --- | --- |
-| Super+Shift+Enter | Open Kitty |
-| Super+P | Open wmenu |
-| Super+1 through Super+9 | View a tag |
-| Super+Shift+1 through Super+Shift+9 | Move a window to a tag |
-| Super+B | Hide or show the bar |
-| Super+S / Super+Shift+S | Full or compact bar |
-| Super+Shift+D | Toggle the laptop display when another output is enabled |
-| Super+Print / Super+Shift+Print | Full or region screenshot, saved and copied |
-| Super+Shift+E | Toggle fullscreen |
-| Super+Shift+Q | Exit dwl |
+| Super+Shift+Enter | Open Foot |
+| Super+P | Application launcher |
+| Super+B | Show/hide the bar |
+| Super+S / Super+Shift+S | Full/minimal status bar |
+| Super+Ctrl+B | Toggle blur everywhere |
+| Super+Ctrl+Shift+B | Toggle blur for the focused window |
+| Super+G | Toggle gaps |
+| Super+Shift+D | Switch between docked and extended displays |
+| Super+T / Super+F / Super+M | Tile/floating/monocle |
+| Super+1–9 / Super+Shift+1–9 | View a tag/move a window to a tag |
+| Super+Shift+E | Fullscreen |
+| Super+Shift+F / Super+Shift+T | Firefox Nightly/T3 Code |
+| Super+E / Super+Shift+M / Super+C | lf/ncmpcpp/calcurse |
+| Super+Print / Super+Shift+Print | Full/region screenshot, saved and copied |
 
-Clock clicks open calcurse, CPU and memory open htop, Wi-Fi opens iwctl, and
-the batteries open upower details. Audio clicks open pavucontrol; middle-click
-mutes, and scrolling changes volume. The theme button switches darkman modes.
+The existing focus, master size, monitor, media, and volume shortcuts remain in
+`config.h`. The bar clock opens calcurse, audio opens pavucontrol, and network
+opens iwctl. Middle-click audio to mute. Scroll audio to adjust volume.
 
-Installation and rebuild commands are in [INSTALL.md](INSTALL.md).
+## Build inputs
+
+`build/sources.json` pins an upstream dwl revision and the community
+[blur](https://codeberg.org/dwl/dwl-patches/src/branch/main/patches/blur) and
+[gaps](https://codeberg.org/dwl/dwl-patches/src/branch/main/patches/gaps) patches.
+`build/layer-blur.patch` adds blur to the layer names used by Yambar, Fuzzel,
+and Mako, including transparency masks and the global blur toggle.
+
+The installer verifies download hashes, applies the patches, copies `config.h`,
+builds a pacman-owned `dwl` package, and checks that XWayland is disabled.
+See [INSTALL.md](INSTALL.md) to install or rebuild.

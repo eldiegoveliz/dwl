@@ -1,0 +1,41 @@
+#!/usr/bin/env python3
+"""Report both battery packs as one energy-weighted Waybar indicator."""
+import glob
+import html
+import json
+import sys
+from pathlib import Path
+
+packs = []
+for entry in sorted(glob.glob('/sys/class/power_supply/BAT*')):
+    path = Path(entry)
+    def read(name, default='0'):
+        try:
+            return (path / name).read_text().strip()
+        except FileNotFoundError:
+            return default
+    if read('present', '1') != '1':
+        continue
+    now, full = float(read('energy_now')), float(read('energy_full'))
+    if not full:
+        voltage = float(read('voltage_min_design', read('voltage_now')))
+        now = float(read('charge_now')) * voltage / 1_000_000
+        full = float(read('charge_full')) * voltage / 1_000_000
+    if full:
+        packs.append((path.name, now, full, read('status'), read('capacity')))
+if not packs:
+    result = {'text': '', 'tooltip': 'No battery detected', 'class': 'normal'}
+else:
+    percent = round(100 * sum(p[1] for p in packs) / sum(p[2] for p in packs))
+    percent = max(0, min(100, percent))
+    charging = any(p[3] == 'Charging' for p in packs)
+    icon = '' if charging else ('󰂃' if percent < 15 else '󰁹')
+    tooltip = '\n'.join(html.escape(f'{p[0]}: {p[4]}% · {p[3]}') for p in packs)
+    result = {'text': f'{icon}  {percent}%', 'tooltip': tooltip,
+              'class': 'charging' if charging else ('low' if percent < 15 else 'normal')}
+if '--yambar' in sys.argv:
+    print(f'battery_text|string|{result["text"]}')
+    print(f'charging|bool|{str(result["class"] == "charging").lower()}')
+    print(f'low|bool|{str(result["class"] == "low").lower()}\n')
+else:
+    print(json.dumps(result))

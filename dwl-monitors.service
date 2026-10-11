@@ -1,0 +1,7 @@
+[Unit]
+Description=Kanshi docking profiles for dwl
+
+[Service]
+Type=exec
+ExecStart=/usr/bin/kanshi --config=%h/.config/dwl/kanshi/config
+Restart=on-failure

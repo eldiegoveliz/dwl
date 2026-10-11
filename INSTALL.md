@@ -1,36 +1,64 @@
-# Install the configuration on Arch Linux
+# Install the desktop
 
-1. Install `base-devel`, `git`, and `yay` before running the installer.
-2. Clone this repository:
+On Arch Linux, run this as your normal user:
 
-   ```sh
-   git clone https://github.com/eldiegoveliz/dwl.git
-   cd dwl
-   ```
+```sh
+./install.sh
+```
 
-3. Edit `wallpaper.conf` for your image paths. If an image is missing, the
-   wallpaper uses a solid background. Edit the battery modules in
-   `yambar/config.yml` to match `/sys/class/power_supply` on this laptop.
-4. Run the installer as your normal user:
+The installer installs dependencies, builds the pinned dwl package in your
+cache, and links this checkout to `~/.config/dwl`. Privileged commands use sudo
+or the desktop authentication dialog. It creates a dwl session entry for SDDM.
 
-   ```sh
-   ./install.sh
-   ```
+Log out and select **dwl** in the login screen. Compositor changes, including
+blur and keybindings, take effect after logging in again.
 
-5. Set your location in `~/.config/darkman/config.yaml` for sunrise and sunset.
-6. Log out and select **dwl** in SDDM.
+## Configure another laptop
 
-The installer downloads the AUR dwl recipe, verifies the upstream release
-archive, and builds a pacman package with your `config.h`. Sources and packages
-stay in `~/.cache/dwl-config-install`. Yambar uses its upstream release with
-compiler warnings allowed on recent GCC versions. Neither program's source is patched.
+1. Install GeistMono Nerd Font for the configured typography.
+2. Set your wallpaper paths in `wallpaper.conf`.
+3. Set the laptop and external-monitor identifiers in `kanshi/config`.
+4. Adjust the extended display position for your laptop resolution.
 
-The checkout is linked to `~/.config/dwl`; user services and the darkman handler
-are linked into your home. The SDDM entry is installed under
-`/usr/local/share/wayland-sessions/dwl.desktop`, ahead of the packaged stock entry.
-If `~/.config/dwl` already belongs to another setup, move it before installation.
+Run `wlr-randr` to see connected display names and descriptions. Kanshi selects
+the docked profile when the configured desk display is connected, and the laptop
+profile when it is absent. Super+Shift+D switches to the extended profile and back.
 
-After editing `config.h`, run `./install.sh` and start a new dwl session.
-For a build without installation, run `./install.sh build`.
-To recreate home-directory links, run `./install.sh link`.
-After editing bar settings, run `systemctl --user restart dwl-bar.service`.
+## Rebuild after editing config.h
+
+```sh
+./install.sh
+```
+
+To build without installing the package or changing symlinks:
+
+```sh
+./install.sh build
+```
+
+To recreate symlinks and reload user-unit definitions without rebuilding:
+
+```sh
+./install.sh link
+```
+
+## Apply app configuration changes
+
+After editing the shared palettes or app configs, regenerate them:
+
+```sh
+~/.config/dwl/scripts/dwl-render-theme
+makoctl reload
+systemctl --user restart dwl-bar.service
+```
+
+New launcher windows use the regenerated config. For changes to Foot's font,
+padding, or palette definitions, close its terminal windows first, then run
+`systemctl --user restart dwl-terminal.service`. Use darkman's light/dark switch
+to change between the existing palettes without closing terminals.
+
+After editing monitor profiles, reload Kanshi:
+
+```sh
+kanshictl reload
+```

@@ -1,0 +1,18 @@
+{
+  "version": "0.9.rice1",
+  "upstream_commit": "f1675a480067b956a551785148af545f80cb6306",
+  "upstream_url": "https://codeberg.org/dwl/dwl/archive/f1675a480067b956a551785148af545f80cb6306.tar.gz",
+  "upstream_sha256": "46d33e98b123cee9cd23fddd6794f926f1235a005fb46e0f5f1957837fcd804e",
+  "patches": [
+    {
+      "name": "blur.patch",
+      "url": "https://codeberg.org/dwl/dwl-patches/raw/commit/7b42b1ab4d91fd1d97ddb4aaa7baaeba6326ae98/patches/blur/blur.patch",
+      "sha256": "c776a88d74eefdb4e8f44bf15dfd4553438492ab6085220eef23c0665de26da8"
+    },
+    {
+      "name": "gaps.patch",
+      "url": "https://codeberg.org/dwl/dwl-patches/raw/commit/7b42b1ab4d91fd1d97ddb4aaa7baaeba6326ae98/patches/gaps/gaps.patch",
+      "sha256": "f38ae3a37db333625556d73815f2d0a0fb03ad77a63ac32d805c6be6254bebf0"
+    }
+  ]
+}

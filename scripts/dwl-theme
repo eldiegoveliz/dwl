@@ -2,9 +2,10 @@
 set -eu
 case ${1:-} in dark|light) ;; *) exit 2 ;; esac
 config=${DWL_CONFIG_DIR:-$HOME/.config/dwl}
-# Leave other desktop sessions to their existing darkman handlers.
-if systemctl --user is-active --quiet dwl-notifications.service; then
-    cat "$config/dunst/dunstrc" "$config/dunst/$1.conf" > "$XDG_RUNTIME_DIR/dwl/dunstrc"
-    dunstctl reload "$XDG_RUNTIME_DIR/dwl/dunstrc"
-fi
+# Run only while the dwl session's services are active.
+systemctl --user is-active --quiet dwl-terminal.service || exit 0
+"$config/scripts/dwl-render-theme" "$1"
+makoctl reload
+case "$1" in dark) signal=USR1 ;; light) signal=USR2 ;; esac
+systemctl --user kill --signal="$signal" --kill-whom=main dwl-terminal.service
 systemctl --user try-restart dwl-bar.service dwl-wallpaper.service

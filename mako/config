@@ -1,0 +1,35 @@
+font=GeistMono Nerd Font 11
+width=350
+height=160
+margin=12,12,12,12
+padding=14
+border-size=1
+border-radius=8
+anchor=top-right
+default-timeout=6000
+max-visible=4
+background-color=#${background}${surface_alpha}
+text-color=#${foreground}ff
+border-color=#${accent}88
+progress-color=over #${accent}55
+format=<b>%s</b>\n%b
+
+[urgency=critical]
+default-timeout=0
+border-color=#${urgent}ff
+
+[app-name=dwl-volume]
+group-by=app-name
+default-timeout=1400
+format=<b>%s</b>
+
+[app-name=dwl-volume group-index=0]
+invisible=0
+
+[app-name=dwl-brightness]
+group-by=app-name
+default-timeout=1400
+format=<b>%s</b>
+
+[app-name=dwl-brightness group-index=0]
+invisible=0

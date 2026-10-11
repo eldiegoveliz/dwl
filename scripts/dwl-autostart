@@ -9,7 +9,9 @@ dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP
     XDG_SESSION_DESKTOP XDG_SESSION_TYPE PATH DWL_INFO DWL_CONFIG_DIR
 systemctl --user restart darkman.service
 systemctl --user stop dunst.service 2>/dev/null || true
-systemctl --user restart dwl-bar.service dwl-notifications.service dwl-wallpaper.service
+"$DWL_CONFIG_DIR/scripts/dwl-render-theme"
+systemctl --user restart dwl-terminal.service dwl-notifications.service \
+    dwl-bar.service dwl-wallpaper.service dwl-monitors.service
 if [ -x /usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1 ]; then
     /usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1 &
 fi

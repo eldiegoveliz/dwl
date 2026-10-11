@@ -1,0 +1,86 @@
+--- a/dwl.c
++++ b/dwl.c
+@@ -190,6 +190,7 @@
+ 	struct wlr_scene_tree *scene;
+ 	struct wlr_scene_tree *popups;
+ 	struct wlr_scene_layer_surface_v1 *scene_layer;
++	struct wlr_scene_blur *blur;
+ 	struct wl_list link;
+ 	int mapped;
+ 	struct wlr_layer_surface_v1 *layer_surface;
+@@ -279,6 +280,7 @@
+ static void cleanupmon(struct wl_listener *listener, void *data);
+ static void cleanuplisteners(void);
+ static void closemon(Monitor *m);
++static void setlayerblurmask(struct wlr_scene_buffer *buffer, int sx, int sy, void *data);
+ static void commitlayersurfacenotify(struct wl_listener *listener, void *data);
+ static void commitlocksurface(struct wl_listener *listener, void *data);
+ static void commitnotify(struct wl_listener *listener, void *data);
+@@ -939,6 +941,12 @@
+ 		return;
+ 	}
+ 
++	if (l->blur) {
++		wlr_scene_blur_set_size(l->blur, layer_surface->surface->current.width,
++			layer_surface->surface->current.height);
++		wlr_scene_node_for_each_buffer(&l->scene->node, setlayerblurmask, l);
++	}
++
+ 	if (layer_surface->current.committed == 0 && l->mapped == layer_surface->surface->mapped)
+ 		return;
+ 	l->mapped = layer_surface->surface->mapped;
+@@ -1101,6 +1109,14 @@
+ 	return group;
+ }
+ 
++static void
++setlayerblurmask(struct wlr_scene_buffer *buffer, int sx, int sy, void *data)
++{
++	LayerSurface *l = data;
++	if (wlr_scene_surface_try_from_buffer(buffer))
++		wlr_scene_blur_set_transparency_mask_source(l->blur, buffer);
++}
++
+ void
+ createlayersurface(struct wl_listener *listener, void *data)
+ {
+@@ -1108,6 +1124,7 @@
+ 	LayerSurface *l;
+ 	struct wlr_surface *surface = layer_surface->surface;
+ 	struct wlr_scene_tree *scene_layer = layers[layermap[layer_surface->pending.layer]];
++	size_t i;
+ 
+ 	if (!layer_surface->output
+ 			&& !(layer_surface->output = selmon ? selmon->wlr_output : NULL)) {
+@@ -1125,6 +1142,15 @@
+ 	l->mon = layer_surface->output->data;
+ 	l->scene_layer = wlr_scene_layer_surface_v1_create(scene_layer, layer_surface);
+ 	l->scene = l->scene_layer->tree;
++	for (i = 0; i < LENGTH(layer_blur_namespaces); i++) {
++		if (!layer_surface->namespace || strcmp(layer_surface->namespace, layer_blur_namespaces[i]))
++			continue;
++		l->blur = wlr_scene_blur_create(l->scene, 0, 0);
++		wlr_scene_node_lower_to_bottom(&l->blur->node);
++		wlr_scene_blur_set_should_only_blur_bottom_layer(l->blur, true);
++		wlr_scene_node_set_enabled(&l->blur->node, blur_enabled);
++		break;
++	}
+ 	l->popups = surface->data = wlr_scene_tree_create(layer_surface->current.layer
+ 			< ZWLR_LAYER_SHELL_V1_LAYER_TOP ? layers[LyrTop] : scene_layer);
+ 	l->scene->node.data = l->popups->node.data = l;
+@@ -2966,10 +2992,15 @@
+ 
+ void toggleblur(const Arg *arg) {
+   Client *c;
++  LayerSurface *l;
++  int i;
+   Monitor *m = NULL;
+   blur_enabled = !blur_enabled;
+   wl_list_for_each(m, &mons, link) {
+     wlr_scene_node_set_enabled(&m->blur->node, blur_enabled);
++    for (i = 0; i < 4; i++)
++      wl_list_for_each(l, &m->layers[i], link)
++        if (l->blur) wlr_scene_node_set_enabled(&l->blur->node, blur_enabled);
+   }
+   wl_list_for_each(c, &clients, link) wlr_scene_node_set_enabled(&c->blur->node, blur_enabled);
+ }

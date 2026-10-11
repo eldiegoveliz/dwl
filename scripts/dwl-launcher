@@ -1,0 +1,6 @@
+#!/bin/sh
+set -eu
+config=${DWL_CONFIG_DIR:-$HOME/.config/dwl}
+runtime=${DWL_RUNTIME_DIR:-$XDG_RUNTIME_DIR/dwl}
+[ -f "$runtime/fuzzel.conf" ] || "$config/scripts/dwl-render-theme"
+exec fuzzel --config="$runtime/fuzzel.conf" "$@"

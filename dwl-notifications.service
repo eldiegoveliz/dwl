@@ -1,5 +1,7 @@
 [Unit]
-Description=Dunst notifications for dwl
+Description=Mako notifications for dwl
 
 [Service]
+Type=dbus
+BusName=org.freedesktop.Notifications
 ExecStart=%h/.config/dwl/scripts/dwl-notifications

@@ -5,6 +5,13 @@ internal=$(printf '%s\n' "$outputs" | jq -r '[.[] | select(.name | startswith("e
 [ -n "$internal" ] || { printf 'No internal eDP output found.\n' >&2; exit 1; }
 enabled=$(printf '%s\n' "$outputs" | jq -r --arg name "$internal" '.[] | select(.name == $name) | .enabled')
 count=$(printf '%s\n' "$outputs" | jq '[.[] | select(.enabled)] | length')
+if systemctl --user is-active --quiet dwl-monitors.service; then
+    if [ "$enabled" = true ] && [ "$count" -gt 1 ]; then
+        exec kanshictl switch docked
+    elif [ "$enabled" = false ]; then
+        exec kanshictl switch extended
+    fi
+fi
 if [ "$enabled" = true ]; then
     if [ "$count" -le 1 ]; then
         dunstify 'Display unchanged' 'The internal screen is the only enabled output.' 2>/dev/null || true

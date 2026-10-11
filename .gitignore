@@ -1,3 +1,2 @@
-# Build artifacts belong in ~/.cache/dwl-config-install.
-*.o
-*.pkg.tar.*
+__pycache__/
+*.py[cod]

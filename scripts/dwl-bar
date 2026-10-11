@@ -1,19 +1,20 @@
 #!/bin/sh
 set -eu
 config=${DWL_CONFIG_DIR:-$HOME/.config/dwl}
-runtime=$XDG_RUNTIME_DIR/dwl
+runtime=${DWL_RUNTIME_DIR:-$XDG_RUNTIME_DIR/dwl}
 mode=${DWL_THEME:-$(darkman get 2>/dev/null || printf dark)}
-case "$mode" in
-    light) export background=f4f1ebff foreground=333b43ff muted=828a91ff accent=006a73ff urgent=c03946ff ;;
-    *) export background=20262dff foreground=dde4eaff muted=687783ff accent=79c4caff urgent=ef828aff ;;
-esac
+case "$mode" in light) ;; *) mode=dark ;; esac
+. "$config/theme/$mode.conf"
+export background=${background}c7 foreground=${foreground}ff muted=${muted}ff \
+    accent=${accent}ff urgent=${urgent}ff
+export battery_script=$config/scripts/dwl-battery
 export dwl_info=${DWL_INFO:-$runtime/status}
 export wifi_interface=none
 for wireless in /sys/class/net/*/wireless; do
     if [ -d "$wireless" ]; then wifi_interface=$(basename "$(dirname "$wireless")"); break; fi
 done
 export cpu_text='CPU {cpu}%' memory_text='RAM {percent_used}%'
-if [ "$(cat "$runtime/bar-mode" 2>/dev/null || printf full)" = mini ]; then
+if [ "$(cat "$runtime/bar-mode" 2>/dev/null || printf mini)" = mini ]; then
     cpu_text= memory_text=
 fi
 pids=
@@ -32,7 +33,7 @@ while :; do
         outputs=$current
         for monitor in $outputs; do
             export monitor
-            envsubst '${background} ${foreground} ${muted} ${accent} ${urgent} ${monitor} ${dwl_info} ${cpu_text} ${memory_text} ${wifi_interface}' \
+            envsubst '${background} ${foreground} ${muted} ${accent} ${urgent} ${monitor} ${dwl_info} ${cpu_text} ${memory_text} ${wifi_interface} ${battery_script}' \
                 < "$config/yambar/config.yml" > "$runtime/yambar-$monitor.yml"
             yambar --backend=wayland --config="$runtime/yambar-$monitor.yml" &
             pids="$pids $!"

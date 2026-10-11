@@ -1,0 +1,27 @@
+#!/bin/sh
+set -eu
+config=${DWL_CONFIG_DIR:-$HOME/.config/dwl}
+runtime=${DWL_RUNTIME_DIR:-$XDG_RUNTIME_DIR/dwl}
+mode=${1:-${DWL_THEME:-$(darkman get 2>/dev/null || printf dark)}}
+case "$mode" in dark|light) ;; *) mode=dark ;; esac
+mkdir -p "$runtime"
+workdir=$(mktemp -d "$runtime/theme.XXXXXX")
+trap 'rm -rf "$workdir"' EXIT
+for palette in dark light; do
+    set -a
+    . "$config/theme/$palette.conf"
+    set +a
+    envsubst < "$config/foot/foot.ini" > "$workdir/foot-$palette.conf"
+done
+cp "$workdir/foot-dark.conf" "$workdir/foot.conf"
+sed -n '/^\[colors-dark\]/,$p' "$workdir/foot-light.conf" | \
+    sed 's/^\[colors-dark\]/[colors-light]/' >> "$workdir/foot.conf"
+set -a
+. "$config/theme/$mode.conf"
+set +a
+for app in fuzzel mako; do
+    case "$app" in mako) template=config ;; *) template=$app.ini ;; esac
+    envsubst < "$config/$app/$template" > "$workdir/$app.conf"
+done
+printf '%s\n' "$mode" > "$workdir/theme"
+for file in "$workdir"/*; do mv -f "$file" "$runtime/"; done

@@ -1,0 +1,91 @@
+#!/usr/bin/env python3
+"""Build pinned upstream dwl and patches entirely outside this checkout."""
+import hashlib
+import json
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import tarfile
+import urllib.request
+
+repo = Path(__file__).resolve().parent.parent
+spec = json.loads((repo / 'build/sources.json').read_text())
+cache = Path(os.environ.get('XDG_CACHE_HOME', str(Path.home() / '.cache'))) / 'dwl-config-install/rice'
+if cache.resolve().is_relative_to(repo):
+    raise SystemExit('Build cache must be outside the configuration repository')
+cache.mkdir(parents=True, exist_ok=True)
+
+def digest(path):
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+def download(name, url, expected):
+    path = cache / name
+    if not path.exists() or digest(path) != expected:
+        with urllib.request.urlopen(url, timeout=30) as response:
+            path.write_bytes(response.read())
+    if digest(path) != expected:
+        raise SystemExit(f'Checksum mismatch: {url}')
+    return path
+
+archive = download('upstream.tar.gz', spec['upstream_url'], spec['upstream_sha256'])
+source_root = cache / 'upstream'
+if source_root.exists():
+    shutil.rmtree(source_root)
+source_root.mkdir()
+with tarfile.open(archive) as tar:
+    tar.extractall(source_root, filter='data')
+source = source_root / 'dwl'
+if not (source / 'dwl.c').is_file():
+    raise SystemExit('Unexpected upstream archive layout')
+
+for patch in spec['patches']:
+    path = download(patch['name'], patch['url'], patch['sha256'])
+    # Our config.h replaces upstream defaults and example keybindings.
+    sections = path.read_text().split('diff --git ')
+    filtered = sections[0] + ''.join('diff --git ' + part for part in sections[1:]
+                                    if not part.startswith('a/config.def.h '))
+    subprocess.run(['patch', '--batch', '--forward', '--no-backup-if-mismatch', '-p1'],
+                   input=filtered, text=True, cwd=source, check=True)
+subprocess.run(['patch', '--batch', '--fuzz=0', '--no-backup-if-mismatch', '-p1',
+                '-i', str(repo / 'build/layer-blur.patch')], cwd=source, check=True)
+shutil.copyfile(repo / 'config.h', source / 'config.h')
+
+recipe = '''
+pkgname=dwl
+pkgver=VERSION_PLACEHOLDER
+pkgrel=1
+pkgdesc='dwl with personal configuration, cached blur, and gaps'
+arch=('x86_64' 'aarch64')
+url='https://codeberg.org/dwl/dwl'
+license=('GPL-3.0-only')
+depends=('libinput' 'libxkbcommon' 'wayland' 'wlroots0.20' 'scenefx'
+         'libwlroots-0.20.so' 'libscenefx-0.5.so')
+makedepends=('pkgconf' 'wayland-protocols' 'patch')
+options=('!debug')
+build() {
+    make -C "$startdir/upstream/dwl" VERSION="$pkgver" XWAYLAND= XLIBS=
+}
+package() {
+    make -C "$startdir/upstream/dwl" DESTDIR="$pkgdir" PREFIX=/usr \\
+        VERSION="$pkgver" XWAYLAND= XLIBS= install
+}
+'''.replace('VERSION_PLACEHOLDER', spec['version'])
+(cache / 'PKGBUILD').write_text(recipe.lstrip())
+subprocess.run(['makepkg', '--force', '--cleanbuild'], cwd=cache, check=True)
+symbols = subprocess.check_output(['nm', '-D', source / 'dwl'], text=True)
+if 'wlr_xwayland_create' in symbols or 'XOpenDisplay' in symbols:
+    raise SystemExit('Unexpected XWayland support in the binary')
+packages = list(cache.glob(f'dwl-{spec["version"]}-1-*.pkg.tar.zst'))
+if len(packages) != 1:
+    raise SystemExit('Expected exactly one built package')
+evidence = {
+    'upstream_commit': spec['upstream_commit'],
+    'config_sha256': digest(source / 'config.h'),
+    'layer_patch_sha256': digest(repo / 'build/layer-blur.patch'),
+    'package': str(packages[0]),
+    'binary': str(source / 'dwl'),
+    'native_wayland_only': True,
+}
+(cache / 'build.json').write_text(json.dumps(evidence, indent=2) + '\n')
+print(f'Built {packages[0]}')

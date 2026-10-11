@@ -1,0 +1,19 @@
+# Adjust these two identifiers when using this config on another laptop.
+output eDP-1 alias $laptop scale 1
+output "Lenovo Group Limited LEN L24e-20 *" alias $desk scale 1
+
+# Prefer the desk monitor when it is connected.
+profile docked {
+    output $laptop disable
+    output $desk enable mode preferred position 0,0
+}
+
+profile laptop {
+    output $laptop enable mode preferred position 0,0
+}
+
+# Super+Shift+D switches between this profile and docked.
+profile extended {
+    output $laptop enable mode preferred position 0,0
+    output $desk enable mode preferred position 1366,0
+}

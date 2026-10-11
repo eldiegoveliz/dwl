@@ -1,0 +1,7 @@
+[Unit]
+Description=Foot terminals for dwl
+
+[Service]
+Type=exec
+ExecStart=%h/.config/dwl/scripts/dwl-foot-server
+Restart=on-failure

@@ -1,0 +1,33 @@
+#!/bin/sh
+set -eu
+case ${1:-} in
+    volume)
+        sink=${DWL_AUDIO_SINK:-@DEFAULT_AUDIO_SINK@}
+        case ${2:-status} in
+            up) wpctl set-volume --limit 1.0 "$sink" 5%+ ;;
+            down) wpctl set-volume "$sink" 5%- ;;
+            mute) wpctl set-mute "$sink" toggle ;;
+            status) ;;
+            *) exit 2 ;;
+        esac
+        value=$(wpctl get-volume "$sink")
+        level=$(printf '%s\n' "$value" | awk '{printf "%.0f", $2 * 100}')
+        title="Volume $level%"
+        case "$value" in *MUTED*) title='Audio muted'; level=0 ;; esac
+        app=dwl-volume ;;
+    brightness)
+        case ${2:-status} in
+            up) brightnessctl set 10%+ >/dev/null ;;
+            down) brightnessctl --min-value=5 set 10%- >/dev/null ;;
+            status) ;;
+            *) exit 2 ;;
+        esac
+        level=$(brightnessctl -m | cut -d, -f4 | tr -d '%')
+        title="Brightness $level%"
+        app=dwl-brightness ;;
+    *) exit 2 ;;
+esac
+# Use the standard notification API directly; progress updates share one group.
+busctl --user call org.freedesktop.Notifications /org/freedesktop/Notifications \
+    org.freedesktop.Notifications Notify susssasa{sv}i \
+    "$app" 0 '' "$title" '' 0 2 value i "$level" transient b true 1400 >/dev/null

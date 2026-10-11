@@ -1,6 +1,6 @@
 [Desktop Entry]
 Name=dwl
-Comment=Stock dwl with personal configuration
+Comment=dwl with glass styling and personal shortcuts
 Exec=@CONFIG_DIR@/scripts/dwl-session
 Type=Application
 DesktopNames=dwl

@@ -1,4 +1,4 @@
-/* Personal configuration for unpatched upstream dwl 0.9. */
+/* Personal dwl configuration with community blur and gaps patches. */
 /* Taken from https://github.com/djpohly/dwl/issues/466 */
 #define COLOR(hex)    { ((hex >> 24) & 0xFF) / 255.0f, \
                         ((hex >> 16) & 0xFF) / 255.0f, \
@@ -8,13 +8,21 @@
 static const int sloppyfocus               = 1;  /* focus follows mouse */
 static const int bypass_surface_visibility = 0;  /* 1 means idle inhibitors will disable idle tracking even if it's surface isn't visible  */
 static const unsigned int borderpx         = 1;  /* border pixel of windows */
+static const int smartgaps                 = 0;
+static int gaps                            = 1;
+static const unsigned int gappx            = 8;
 static const unsigned int snap             = 32; /* snap pixel */
 static const float rootcolor[]             = COLOR(0x222222ff);
 /* This conforms to the xdg-protocol. Set the alpha to zero to restore the old behavior */
 static const float fullscreen_bg[]         = {0.0f, 0.0f, 0.0f, 1.0f}; /* You can also use glsl colors */
 static const float bordercolor[] = COLOR(0x444444ff);
-static const float focuscolor[] = COLOR(0x005577ff);
+static const float focuscolor[] = COLOR(0x5ca6afff);
 static const float urgentcolor[] = COLOR(0xe36a6aff);
+
+/* Cached wallpaper blur keeps GPU use modest. Super+Ctrl+B toggles it. */
+#define blur_params 2, 5, 0.0, 1.0, 1.0, 1.0
+static int blur_enabled = 1;
+static const char *const layer_blur_namespaces[] = { "panel", "launcher", "notifications" };
 
 /* tagging */
 #define TAGCOUNT (9)
@@ -109,7 +117,7 @@ static const enum libinput_config_tap_button_map button_map = LIBINPUT_CONFIG_TA
 #define SHCMD(cmd) { .v = (const char*[]){ "/bin/sh", "-c", cmd, NULL } }
 
 /* commands */
-static const char *dmenucmd[] = { "wmenu-run", "-f", "GeistMono Nerd Font 12", "-N", "222222", "-n", "bbbbbb", "-S", "005577", "-s", "eeeeee", NULL };
+static const char *dmenucmd[] = { "dwl-launcher", NULL };
 static const char *termcmd[] = { "dwl-terminal", NULL };
 static const char *ncmpcppcmd[] = { "dwl-terminal", "-e", "ncmpcpp", NULL };
 static const char *firefoxnightlycmd[] = { "firefox-nightly", NULL };
@@ -120,14 +128,14 @@ static const char *calcmd[] = { "dwl-terminal", "-e", "calcurse", NULL };
 static const char *localccmd[] = { "localc", NULL };
 static const char *scrotcmd[] = { "dwl-screenshot", "full", NULL };
 static const char *scrotsel[] = { "dwl-screenshot", "region", NULL };
-static const char *brupcmd[] = { "brightnessctl", "set", "10%+", NULL };
-static const char *brdowncmd[] = { "brightnessctl", "set", "10%-", NULL };
+static const char *brupcmd[] = { "dwl-controls", "brightness", "up", NULL };
+static const char *brdowncmd[] = { "dwl-controls", "brightness", "down", NULL };
 static const char *mpcToggle[] = { "/bin/mpc", "toggle", NULL };
 static const char *mpcNext[] = { "/bin/mpc", "next", NULL };
 static const char *mpcPrev[] = { "/bin/mpc", "prev", NULL };
-static const char *upvol[] = { "/bin/wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", "5%+", NULL };
-static const char *downvol[] = { "/bin/wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", "5%-", NULL };
-static const char *mutevol[] = { "/bin/wpctl", "set-mute",   "@DEFAULT_AUDIO_SINK@", "toggle", NULL };
+static const char *upvol[] = { "dwl-controls", "volume", "up", NULL };
+static const char *downvol[] = { "dwl-controls", "volume", "down", NULL };
+static const char *mutevol[] = { "dwl-controls", "volume", "mute", NULL };
 static const char *barcmd[] = { "dwl-status-mode", "toggle", NULL };
 static const char *slfull[] = { "dwl-status-mode", "full", NULL };
 static const char *slmini[] = { "dwl-status-mode", "mini", NULL };
@@ -138,6 +146,9 @@ static const Key keys[] = {
 	{ MODKEY,                       XKB_KEY_p,      spawn,          {.v = dmenucmd } },
 	{ MODKEY|WLR_MODIFIER_SHIFT,             XKB_KEY_Return, spawn,          {.v = termcmd } },
 	{ MODKEY,                       XKB_KEY_b,      spawn,          {.v = barcmd} },
+	{ MODKEY|WLR_MODIFIER_CTRL, XKB_KEY_b, toggleblur, {0} },
+	{ MODKEY|WLR_MODIFIER_CTRL|WLR_MODIFIER_SHIFT, XKB_KEY_b, toggleblurfocused, {0} },
+	{ MODKEY, XKB_KEY_g, togglegaps, {0} },
 	{ MODKEY,                       XKB_KEY_j,      focusstack,     {.i = +1 } },
 	{ MODKEY,                       XKB_KEY_k,      focusstack,     {.i = -1 } },
 	{ MODKEY,                       XKB_KEY_i,      incnmaster,     {.i = +1 } },

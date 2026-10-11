@@ -1,6 +1,6 @@
 # Palette, output, and status path are filled by scripts/dwl-bar.
 bar:
-  height: 34
+  height: 30
   location: top
   layer: top
   monitor: ${monitor}
@@ -81,31 +81,28 @@ bar:
           map:
             on-click:
               left: pavucontrol
-              middle: wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle
-              wheel-up: wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+
-              wheel-down: wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-
+              middle: dwl-controls volume mute
+              wheel-up: dwl-controls volume up
+              wheel-down: dwl-controls volume down
             conditions:
               sink_muted:
                 string: {text: "󰝟 muted", foreground: "${muted}"}
             default:
               string: {text: " {sink_percent}%"}
-    - battery:
-        name: BAT0
+    - script:
+        path: ${battery_script}
+        args: [--yambar]
         poll-interval: 30000
-        content: &battery
+        content:
           map:
             on-click: dwl-bar-action battery
             conditions:
-              capacity < 15:
-                string: {text: "{name} {capacity}%", foreground: "${urgent}"}
-              state == charging:
-                string: {text: " {name} {capacity}%", foreground: "${accent}"}
+              low:
+                string: {text: "{battery_text}", foreground: "${urgent}"}
+              charging:
+                string: {text: "{battery_text}", foreground: "${accent}"}
             default:
-              string: {text: "{name} {capacity}%"}
-    - battery:
-        name: BAT1
-        poll-interval: 30000
-        content: *battery
+              string: {text: "{battery_text}"}
     - label:
         content:
           string:
