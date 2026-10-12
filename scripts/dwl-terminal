@@ -10,7 +10,8 @@ case ${1:-} in
     *) set -- --title="$(basename "$1")" "$@" ;;
 esac
 [ -f "$runtime/foot-$mode.conf" ] || "$config/scripts/dwl-render-theme" "$mode"
+font=$(sed -n 's/^font=//p' "$config/foot/foot.ini")
 if [ -S "$runtime/foot.sock" ]; then
-    exec footclient --client-environment --server-socket="$runtime/foot.sock" "$@"
+    exec footclient --client-environment --server-socket="$runtime/foot.sock" --override="font=$font" "$@"
 fi
-exec foot --config="$runtime/foot-$mode.conf" "$@"
+exec foot --config="$runtime/foot-$mode.conf" --override="font=$font" "$@"

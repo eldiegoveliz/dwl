@@ -7,7 +7,7 @@ bar:
   background: ${background}
   foreground: ${foreground}
   font: GeistMono Nerd Font:size=10
-  spacing: 12
+  spacing: 8
   margin: 12
   left:
     - dwl:
@@ -19,7 +19,7 @@ bar:
               id == 0:
                 string:
                   text: "  {layout}  {title}"
-                  max: 24
+                  max: ${title_width}
               urgent:
                 string: {text: " {id} ", foreground: "${urgent}"}
               selected:
@@ -35,12 +35,50 @@ bar:
   center:
     - clock:
         time-format: "%H:%M"
-        date-format: "%a %d %b"
+        date-format: "${date_format}"
         content:
           string:
             text: "{date}  {time}"
             on-click: dwl-bar-action calendar
   right:
+    - script:
+        path: ${status_script}
+        args: [--watch]
+        content:
+          list:
+            spacing: 8
+            items:
+              - map:
+                  conditions:
+                    caps_lock:
+                      string: {text: "CAPS", foreground: "${urgent}"}
+              - map:
+                  on-click:
+                    left: dwl-bar-status --music play-pause
+                    right: dwl-bar-action music
+                    wheel-up: dwl-bar-status --music next
+                    wheel-down: dwl-bar-status --music previous
+                  conditions:
+                    music_playing:
+                      string: {text: "{music_text}", max: "${music_width}", foreground: "${accent}"}
+                  default:
+                    string: {text: "{music_text}", max: "${music_width}", foreground: "${muted}"}
+              - map:
+                  on-click: dwl-bar-action disk
+                  conditions:
+                    disk_low:
+                      string: {text: "{disk_text}", foreground: "${urgent}"}
+                  default:
+                    string: {text: "{disk_text}", foreground: "${muted}"}
+              - map:
+                  on-click: dwl-bar-action tailscale
+                  conditions:
+                    tailscale_warning:
+                      string: {text: "{tailscale_text}!", foreground: "${urgent}"}
+                    tailscale_online:
+                      string: {text: "{tailscale_text}", foreground: "${accent}"}
+                  default:
+                    string: {text: "{tailscale_text}", foreground: "${muted}"}
     - cpu:
         poll-interval: 2500
         content:

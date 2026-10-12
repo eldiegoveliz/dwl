@@ -1,0 +1,24 @@
+--- a/dwl.c
++++ b/dwl.c
+@@ -1930,6 +1930,7 @@
+ {
+ 	/* Called when the surface is mapped, or ready to display on-screen. */
+ 	Client *p = NULL;
++	Client *previous = selmon ? focustop(selmon) : NULL;
+ 	Client *w, *c = wl_container_of(listener, c, map);
+ 	Monitor *m;
+ 	int i;
+@@ -1971,7 +1972,12 @@
+ 	c->geom.height += 2 * c->bw;
+ 
+ 	/* Insert this client into client lists. */
+-	wl_list_insert(&clients, &c->link);
++	/* Keep the master: attach below the focused tiled client, as in dwm.
++	 * With no tiled selection, append instead of replacing the master. */
++	if (previous && !previous->isfloating)
++		wl_list_insert(&previous->link, &c->link);
++	else
++		wl_list_insert(clients.prev, &c->link);
+ 	wl_list_insert(&fstack, &c->flink);
+ 
+ 	c->foreign_toplevel_handle = wlr_ext_foreign_toplevel_handle_v1_create(

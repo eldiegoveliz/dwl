@@ -22,7 +22,7 @@ privileged() {
 if [ "$action" = install ]; then
     privileged /usr/bin/pacman -S --needed --noconfirm foot fuzzel mako kanshi \
         scenefx wlroots0.20 swaybg wlr-randr grim slurp wl-clipboard jq gettext \
-        darkman htop pavucontrol upower xdg-user-dirs python patch base-devel
+        darkman htop pavucontrol upower xdg-user-dirs python patch base-devel playerctl mpc
     if ! pacman -Q yambar >/dev/null 2>&1; then
         privileged /usr/bin/pacman -S --needed --noconfirm meson ninja scdoc tllist
         bar_cache=${XDG_CACHE_HOME:-$HOME/.cache}/dwl-config-install/yambar-aur
@@ -43,7 +43,8 @@ if [ "$action" != link ]; then
     if pacman -Q dwl-personal >/dev/null 2>&1; then
         privileged /usr/bin/pacman -R --noconfirm dwl-personal
     fi
-    privileged /usr/bin/pacman -U --noconfirm "$cache"/dwl-[0-9]*.pkg.tar.zst
+    package=$(python -c 'import json,sys; print(json.load(open(sys.argv[1]))["package"])' "$cache/build.json")
+    privileged /usr/bin/pacman -U --noconfirm "$package"
 fi
 mkdir -p "$HOME/.config/systemd/user" "$HOME/.local/share/darkman" "$cache"
 ln -sfn "$repo" "$config"

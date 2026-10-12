@@ -47,8 +47,9 @@ for patch in spec['patches']:
                                     if not part.startswith('a/config.def.h '))
     subprocess.run(['patch', '--batch', '--forward', '--no-backup-if-mismatch', '-p1'],
                    input=filtered, text=True, cwd=source, check=True)
-subprocess.run(['patch', '--batch', '--fuzz=0', '--no-backup-if-mismatch', '-p1',
-                '-i', str(repo / 'build/layer-blur.patch')], cwd=source, check=True)
+for name in spec['local_patches']:
+    subprocess.run(['patch', '--batch', '--fuzz=0', '--no-backup-if-mismatch', '-p1',
+                    '-i', str(repo / 'build' / name)], cwd=source, check=True)
 shutil.copyfile(repo / 'config.h', source / 'config.h')
 
 recipe = '''
@@ -82,7 +83,7 @@ if len(packages) != 1:
 evidence = {
     'upstream_commit': spec['upstream_commit'],
     'config_sha256': digest(source / 'config.h'),
-    'layer_patch_sha256': digest(repo / 'build/layer-blur.patch'),
+    'local_patch_sha256': {name: digest(repo / 'build' / name) for name in spec['local_patches']},
     'package': str(packages[0]),
     'binary': str(source / 'dwl'),
     'native_wayland_only': True,

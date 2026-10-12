@@ -52,8 +52,10 @@ makoctl reload
 systemctl --user restart dwl-bar.service
 ```
 
-New launcher windows use the regenerated config. For changes to Foot's font,
-padding, or palette definitions, close its terminal windows first, then run
+New launcher windows use the regenerated config. Foot's `font=` setting applies
+to new windows immediately; existing windows support Ctrl+- / Ctrl++ / Ctrl+0.
+For changes to Foot's padding or palette definitions, close its terminal
+windows first, then run
 `systemctl --user restart dwl-terminal.service`. Use darkman's light/dark switch
 to change between the existing palettes without closing terminals.
 

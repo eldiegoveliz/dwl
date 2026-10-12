@@ -1,0 +1,113 @@
+#!/usr/bin/env python3
+"""Live Yambar tags and controls for music, disk, Tailscale, and lock keys."""
+import json
+from pathlib import Path
+import re
+import shutil
+import signal
+import subprocess
+import sys
+import time
+
+signal.signal(signal.SIGINT, signal.SIG_DFL)
+
+
+def run(*args):
+    try:
+        result = subprocess.run(args, capture_output=True, text=True, timeout=2)
+        return result.stdout.strip() if result.returncode == 0 else ''
+    except (OSError, subprocess.TimeoutExpired):
+        return ''
+
+
+def clean(text):
+    return ' '.join(re.sub(r'[\x00-\x1f\x7f]', ' ', text).split())
+
+
+def music():
+    players = []
+    output = run('playerctl', '--all-players', 'metadata', '--format',
+                 '{{playerName}}\t{{status}}\t{{artist}} — {{title}}')
+    for line in output.splitlines():
+        parts = line.split('\t', 2)
+        if len(parts) == 3 and parts[1] in ('Playing', 'Paused'):
+            players.append((parts[1], clean(parts[2]).strip(' —'), parts[0]))
+    playing = next((p for p in players if p[0] == 'Playing'), None)
+    if playing:
+        return playing
+    output = run('mpc', '--format', '%artist% — %title%', 'status')
+    lines = output.splitlines()
+    state = next((line for line in lines if line.startswith('[playing]') or line.startswith('[paused]')), '')
+    if state:
+        mpd = ('Playing' if state.startswith('[playing]') else 'Paused', clean(lines[0]).strip(' —'), '@mpd')
+        if mpd[0] == 'Playing' or not players:
+            return mpd
+    return players[0] if players else ('Stopped', '', '')
+
+
+def tailscale():
+    output = run('tailscale', 'status', '--json')
+    try:
+        status = json.loads(output)
+    except (ValueError, TypeError):
+        return {'tailscale_text': 'TS ?', 'tailscale_online': False, 'tailscale_warning': True}
+    online = status.get('BackendState') == 'Running' and status.get('Self', {}).get('Online', False)
+    peers = sum(bool(p.get('Online')) for p in (status.get('Peer') or {}).values())
+    label = str(peers) if online else ('off' if status.get('BackendState') == 'Stopped' else 'offline')
+    return {'tailscale_text': f'TS {label}', 'tailscale_online': bool(online),
+            'tailscale_warning': bool(status.get('Health'))}
+
+
+def disk():
+    usage = shutil.disk_usage(Path.home())
+    return {'disk_text': f'󰋊 {usage.free / 2**30:.0f}G', 'disk_low': usage.free / usage.total < 0.1}
+
+
+def caps_lock():
+    for led in Path('/sys/class/leds').glob('*::capslock/brightness'):
+        try:
+            if int(led.read_text().strip()):
+                return True
+        except (OSError, ValueError):
+            pass
+    return False
+
+
+def emit(tags):
+    for name, value in tags.items():
+        kind = 'bool' if isinstance(value, bool) else 'string'
+        print(f'{name}|{kind}|{str(value).lower() if kind == "bool" else clean(value)}')
+    print(flush=True)
+
+
+if sys.argv[1:2] == ['--music']:
+    state, title, player = music()
+    action = sys.argv[2] if len(sys.argv) > 2 else 'play-pause'
+    if action not in ('play-pause', 'next', 'previous'):
+        raise SystemExit(2)
+    if player == '@mpd':
+        run('mpc', {'play-pause': 'toggle', 'next': 'next', 'previous': 'prev'}[action])
+    elif player:
+        run('playerctl', '--player', player, action)
+    raise SystemExit(0)
+
+watch = '--watch' in sys.argv
+tags, updated, previous = {}, {}, None
+while True:
+    now = time.monotonic()
+    for name, interval, getter in [('disk', 30, disk), ('tailscale', 15, tailscale)]:
+        if now - updated.get(name, -float('inf')) >= interval:
+            tags.update(getter())
+            updated[name] = now
+    if now - updated.get('music', -float('inf')) >= 3:
+        state, title, player = music()
+        tags.update(music_text=f'{"" if state == "Playing" else ""} {title}' if title else ' idle',
+                    music_playing=state == 'Playing')
+        updated['music'] = now
+    tags['caps_lock'] = caps_lock()
+    if tags != previous:
+        emit(tags)
+        previous = tags.copy()
+    if not watch:
+        break
+    time.sleep(1)

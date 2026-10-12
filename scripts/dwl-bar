@@ -8,15 +8,13 @@ case "$mode" in light) ;; *) mode=dark ;; esac
 export background=${background}c7 foreground=${foreground}ff muted=${muted}ff \
     accent=${accent}ff urgent=${urgent}ff
 export battery_script=$config/scripts/dwl-battery
+export status_script=$config/scripts/dwl-bar-status
 export dwl_info=${DWL_INFO:-$runtime/status}
 export wifi_interface=none
 for wireless in /sys/class/net/*/wireless; do
     if [ -d "$wireless" ]; then wifi_interface=$(basename "$(dirname "$wireless")"); break; fi
 done
-export cpu_text='CPU {cpu}%' memory_text='RAM {percent_used}%'
-if [ "$(cat "$runtime/bar-mode" 2>/dev/null || printf mini)" = mini ]; then
-    cpu_text= memory_text=
-fi
+bar_mode=$(cat "$runtime/bar-mode" 2>/dev/null || printf mini)
 pids=
 cleanup() { [ -z "$pids" ] || kill $pids 2>/dev/null || true; }
 trap cleanup EXIT
@@ -33,7 +31,14 @@ while :; do
         outputs=$current
         for monitor in $outputs; do
             export monitor
-            envsubst '${background} ${foreground} ${muted} ${accent} ${urgent} ${monitor} ${dwl_info} ${cpu_text} ${memory_text} ${wifi_interface} ${battery_script}' \
+            width=$(wlr-randr --json | jq -r --arg monitor "$monitor" '.[] | select(.name == $monitor) | (.scale // 1) as $scale | .modes[] | select(.current) | (.width / $scale | floor)')
+            export title_width=24 music_width=24 date_format='%a %d %b'
+            export cpu_text='CPU {cpu}%' memory_text='RAM {percent_used}%'
+            if [ "$bar_mode" = mini ]; then cpu_text= memory_text=; fi
+            if [ "${width:-0}" -lt 1600 ]; then
+                title_width=12 music_width=16 date_format='%d %b'
+            fi
+            envsubst '${background} ${foreground} ${muted} ${accent} ${urgent} ${monitor} ${dwl_info} ${cpu_text} ${memory_text} ${wifi_interface} ${battery_script} ${status_script} ${title_width} ${music_width} ${date_format}' \
                 < "$config/yambar/config.yml" > "$runtime/yambar-$monitor.yml"
             yambar --backend=wayland --config="$runtime/yambar-$monitor.yml" &
             pids="$pids $!"

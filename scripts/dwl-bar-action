@@ -4,6 +4,9 @@ config=${DWL_CONFIG_DIR:-$HOME/.config/dwl}
 case ${1:-} in
     system) exec "$config/scripts/dwl-terminal" htop ;;
     network) exec "$config/scripts/dwl-terminal" iwctl ;;
+    music) exec "$config/scripts/dwl-terminal" ncmpcpp ;;
+    disk) exec "$config/scripts/dwl-terminal" sh -c 'df -h / /home; printf "\nPress Enter to close."; read -r reply' ;;
+    tailscale) exec "$config/scripts/dwl-terminal" sh -c 'tailscale status; printf "\nPress Enter to close."; read -r reply' ;;
     calendar)
         if command -v calcurse >/dev/null 2>&1; then
             exec "$config/scripts/dwl-terminal" calcurse
