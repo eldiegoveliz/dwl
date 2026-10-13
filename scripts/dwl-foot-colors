@@ -1,0 +1,47 @@
+#!/usr/bin/env python3
+"""Supply current Foot colors to new clients or update only this session's PTYs."""
+import configparser
+import os
+from pathlib import Path
+import sys
+
+runtime = Path(os.environ.get('DWL_RUNTIME_DIR', Path(os.environ['XDG_RUNTIME_DIR']) / 'dwl'))
+config = configparser.ConfigParser(interpolation=None)
+config.read(runtime / 'foot.conf')
+if sys.argv[1] == '--overrides':
+    for name in ('colors-dark', 'colors-light'):
+        for key, value in config[name].items():
+            print(f'{name}.{key}={value}')
+    raise SystemExit(0)
+
+mode = sys.argv[1]
+colors = config['colors-' + mode]
+def osc(code, value): return f'\033]{code};{value}\033\\'
+sequence = ''.join(osc(4, f'{i};#{colors["regular" + str(i)]}') +
+                   osc(4, f'{i+8};#{colors["bright" + str(i)]}') for i in range(8))
+sequence += osc(10, '#' + colors['foreground'])
+rgb = colors['background']
+alpha = round(float(colors['alpha']) * 255)
+sequence += osc(11, f'rgba:{rgb[:2]}/{rgb[2:4]}/{rgb[4:]}/{alpha:02x}')
+sequence += osc(12, '#' + colors['cursor'].split()[-1])
+sequence += osc(17, '#' + colors['selection-background'])
+sequence += osc(19, '#' + colors['selection-foreground'])
+data = sequence.encode()
+socket = ('--server=' + str(runtime / 'foot.sock')).encode()
+for process in Path('/proc').glob('[0-9]*'):
+    try:
+        args = (process / 'cmdline').read_bytes().split(b'\0')
+        if socket not in args:
+            continue
+        children = (process / 'task' / process.name / 'children').read_text().split()
+        for child in children:
+            tty = Path(f'/proc/{child}/fd/0').resolve()
+            if tty.parent != Path('/dev/pts') or not tty.name.isdigit():
+                continue
+            fd = os.open(tty, os.O_WRONLY | os.O_NOCTTY | os.O_NONBLOCK)
+            try:
+                os.write(fd, data)
+            finally:
+                os.close(fd)
+    except (FileNotFoundError, PermissionError, ProcessLookupError):
+        continue

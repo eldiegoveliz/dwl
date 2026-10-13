@@ -1,0 +1,54 @@
+@define-color bar_bg alpha(#${background}, ${bar_alpha});
+@define-color foreground #${foreground};
+@define-color muted #${muted};
+@define-color accent #${accent};
+@define-color urgent #${urgent};
+
+* {
+  font-family: "GeistMono Nerd Font";
+  font-size: 14px;
+  min-height: 0;
+  border: none;
+  box-shadow: none;
+}
+
+window#waybar { background: transparent; color: @foreground; }
+window#waybar > box { background: @bar_bg; border-radius: 8px; padding: 0 10px; }
+
+#custom-dwl, #clock, #custom-caps, #custom-disk, #custom-tailscale,
+#cpu, #memory, #custom-network, #bluetooth, #pulseaudio, #custom-battery, #custom-theme,
+#custom-music, #custom-music-prev, #custom-music-next {
+  padding: 0 4px;
+  border-radius: 5px;
+  transition: background-color 120ms ease-out, color 120ms ease-out;
+}
+
+.tag { padding: 0 8px; color: @muted; border-radius: 5px; }
+.tag.occupied { color: @foreground; }
+.tag.selected { color: @accent; }
+.tag.urgent { color: @urgent; }
+.tag:hover { background: alpha(@accent, 0.14); }
+#custom-dwl { padding-left: 16px; }
+/* Reserve the icons' actual width instead of letting them overhang an 8px cell. */
+.modules-right * { font-family: "GeistMono Nerd Font Propo"; }
+#resources, #connectivity, #audio-power { margin-left: 0; }
+#clock { margin-left: 4px; padding-left: 3px; padding-right: 0; font-weight: 600; }
+#custom-music { padding: 0 3px; }
+#custom-music-prev, #custom-music-next { padding: 0 6px; color: @muted; }
+#cpu, #memory, #custom-disk, #custom-music.idle, #custom-music.paused,
+#custom-music.stopped { color: @muted; }
+#custom-music.playing, #custom-music.output, #custom-tailscale.online, #custom-battery.charging,
+#custom-theme, #bluetooth.connected { color: @accent; }
+#custom-caps, #custom-disk.low, #custom-tailscale.warning, #custom-battery.low {
+  color: @urgent;
+}
+#custom-network.disconnected, #custom-tailscale.offline,
+#bluetooth.off, #bluetooth.disabled { color: @muted; }
+
+#clock:hover, #custom-disk:hover, #custom-tailscale:hover, #cpu:hover,
+#memory:hover, #custom-network:hover, #bluetooth:hover, #pulseaudio:hover, #custom-battery:hover,
+#custom-theme:hover, #custom-music:hover, #custom-music-prev:hover,
+#custom-music-next:hover { background: alpha(@accent, 0.14); }
+
+tooltip { background: #${background}; color: @foreground; border-radius: 8px; }
+tooltip label { color: @foreground; text-shadow: none; padding: 6px; }

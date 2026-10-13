@@ -1,0 +1,63 @@
+#!/usr/bin/env python3
+"""Return a cached Matugen color overlay, leaving surfaces and opacity manual."""
+import hashlib
+import json
+import os
+from pathlib import Path
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+
+config = Path(os.environ.get('DWL_CONFIG_DIR', Path.home() / '.config/dwl'))
+runtime = Path(os.environ.get('DWL_RUNTIME_DIR', Path(os.environ['XDG_RUNTIME_DIR']) / 'dwl'))
+mode = sys.argv[1]
+if mode not in ('light', 'dark'):
+    raise SystemExit(2)
+
+def settings(path):
+    return dict(line.split('=', 1) for line in path.read_text().splitlines()
+                if '=' in line and not line.lstrip().startswith('#'))
+
+options = settings(config / 'theme/matugen.conf')
+binary = shutil.which('matugen')
+wallpaper = settings(config / 'wallpaper.conf').get(mode, '')
+image = Path(os.path.expandvars(wallpaper.strip('"\''))).expanduser()
+if options.get('enabled') != '1' or not binary or not image.is_file():
+    print('/dev/null')
+    raise SystemExit(0)
+
+base = settings(config / f'theme/{mode}.conf')
+manual = {key: '#' + base[key] for key in ('red', 'green', 'yellow', 'purple')}
+template = config / 'matugen/palette.conf'
+key = hashlib.sha256(json.dumps([str(image.resolve()), image.stat().st_mtime_ns,
+    image.stat().st_size, mode, manual, options, template.read_text(),
+    Path(binary).stat().st_mtime_ns], sort_keys=True).encode()).hexdigest()[:20]
+cache = runtime / 'matugen'
+cache.mkdir(parents=True, exist_ok=True)
+output = cache / f'{mode}-{key}.conf'
+if not output.exists():
+    # Each caller renders privately; publication is atomic, even at session startup.
+    with tempfile.TemporaryDirectory(prefix='render-', dir=cache) as directory:
+        work = Path(directory)
+        result = work / 'palette.conf'
+        cfg = work / 'config.toml'
+        cfg.write_text('[config]\n\n[templates.palette]\ninput_path = ' +
+            json.dumps(str(template)) + '\noutput_path = ' + json.dumps(str(result)) + '\n')
+        try:
+            subprocess.run([binary, 'image', str(image), '--config', str(cfg),
+                '--mode', mode, '--type', options['scheme'], '--source-color-index',
+                options['source_color_index'], '--import-json-string',
+                json.dumps({'manual': manual}), '--quiet'], check=True, timeout=30,
+                stdout=subprocess.DEVNULL)
+            values = settings(result)
+            if set(values) != {'accent', 'red', 'green', 'yellow', 'blue', 'purple'} or any(
+                    not re.fullmatch('[0-9a-fA-F]{6}', value) for value in values.values()):
+                raise ValueError('Matugen returned an invalid color overlay')
+            result.replace(output)
+        except (subprocess.SubprocessError, OSError, ValueError) as error:
+            print(f'Matugen: {error}; using the manual palette', file=sys.stderr)
+            print('/dev/null')
+            raise SystemExit(0)
+print(output)

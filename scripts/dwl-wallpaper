@@ -3,6 +3,9 @@ set -eu
 mode=${DWL_THEME:-$(darkman get 2>/dev/null || printf dark)}
 config=${DWL_CONFIG_DIR:-$HOME/.config/dwl}
 . "$config/wallpaper.conf"
+if systemctl --user is-active --quiet dwl-terminal.service; then
+    "$config/scripts/dwl-theme" "$mode" --keep-wallpaper
+fi
 case "$mode" in light) image=$light ;; *) image=$dark ;; esac
 if [ -f "$image" ]; then
     exec swaybg --image "$image" --mode fill

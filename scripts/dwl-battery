@@ -31,7 +31,7 @@ else:
     charging = any(p[3] == 'Charging' for p in packs)
     icon = '' if charging else ('󰂃' if percent < 15 else '󰁹')
     tooltip = '\n'.join(html.escape(f'{p[0]}: {p[4]}% · {p[3]}') for p in packs)
-    result = {'text': f'{icon}  {percent}%', 'tooltip': tooltip,
+    result = {'text': f'{icon}\u2005{percent}%', 'tooltip': tooltip,
               'class': 'charging' if charging else ('low' if percent < 15 else 'normal')}
 if '--yambar' in sys.argv:
     print(f'battery_text|string|{result["text"]}')

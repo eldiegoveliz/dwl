@@ -1,0 +1,123 @@
+{
+  "name": "panel",
+  "layer": "top",
+  "position": "top",
+  "height": 34,
+  "spacing": 0,
+  "fixed-center": true,
+  "modules-left": ["custom/dwl"],
+  "modules-center": ["group/music"],
+  "modules-right": ["custom/caps", "group/resources", "group/connectivity", "group/audio-power", "clock"],
+  "group/resources": {
+    "orientation": "horizontal",
+    "modules": ["custom/disk", "cpu", "memory"]
+  },
+  "group/connectivity": {
+    "orientation": "horizontal",
+    "modules": ["custom/tailscale", "custom/network", "bluetooth"]
+  },
+  "group/audio-power": {
+    "orientation": "horizontal",
+    "modules": ["pulseaudio", "custom/battery", "custom/theme"]
+  },
+  "custom/dwl": {
+    "return-type": "json",
+    "exec-on-event": false,
+    "restart-interval": 2
+  },
+  "clock": {
+    "format": "{:%a %d %b  %H:%M}",
+    "tooltip-format": "<big>{:%A, %d %B %Y}</big>\n<tt>{calendar}</tt>\nClick to open calendar",
+    "on-click": "dwl-bar-action calendar"
+  },
+  "custom/caps": {
+    "return-type": "json",
+    "hide-empty-text": true,
+    "exec-on-event": false,
+    "restart-interval": 2
+  },
+  "group/music": {
+    "orientation": "horizontal",
+    "modules": ["custom/music-prev", "custom/music", "custom/music-next"]
+  },
+  "custom/music-prev": {
+    "format": "󰒮",
+    "tooltip-format": "Previous track",
+    "on-click": "dwl-bar-status --music previous"
+  },
+  "custom/music": {
+    "return-type": "json",
+    "exec-on-event": false,
+    "restart-interval": 2,
+    "on-click": "dwl-bar-status --music play-pause",
+    "on-click-right": "dwl-bar-action music",
+    "on-scroll-up": "dwl-bar-status --music next",
+    "on-scroll-down": "dwl-bar-status --music previous"
+  },
+  "custom/music-next": {
+    "format": "󰒭",
+    "tooltip-format": "Next track",
+    "on-click": "dwl-bar-status --music next"
+  },
+  "custom/disk": {
+    "return-type": "json",
+    "interval": 30,
+    "on-click": "dwl-bar-action disk"
+  },
+  "custom/tailscale": {
+    "return-type": "json",
+    "interval": 15,
+    "on-click": "dwl-bar-action tailscale"
+  },
+  "cpu": {
+    "interval": 3,
+    "format": "\u2005{usage}%",
+    "on-click": "dwl-bar-action system"
+  },
+  "memory": {
+    "interval": 3,
+    "format": "󰍛\u2005{percentage}%",
+    "tooltip-format": "RAM: {used:.1f} / {total:.1f} GiB ({percentage}%)\nAvailable: {avail:.1f} GiB\nSwap: {swapUsed:.1f} / {swapTotal:.1f} GiB\nClick to open htop",
+    "on-click": "dwl-bar-action system"
+  },
+  "custom/network": {
+    "return-type": "json",
+    "exec-on-event": false,
+    "restart-interval": 2,
+    "on-click": "dwl-bar-action network"
+  },
+  "bluetooth": {
+    "format": "",
+    "format-off": "󰂲",
+    "format-disabled": "󰂲",
+    "format-no-controller": "󰂲",
+    "format-connected": "",
+    "tooltip-format": "Bluetooth: {status}\n{controller_alias}\nClick to manage devices · right-click: bluetoothctl",
+    "tooltip-format-off": "Bluetooth off\n{controller_alias}\nClick to manage devices · right-click: bluetoothctl",
+    "tooltip-format-no-controller": "No Bluetooth controller\nClick to manage devices",
+    "tooltip-format-connected": "Bluetooth: {num_connections} connected\n{device_enumerate}\nClick to manage devices · right-click: bluetoothctl",
+    "tooltip-format-enumerate-connected": "{device_alias}",
+    "tooltip-format-enumerate-connected-battery": "{device_alias}: {device_battery_percentage}% battery",
+    "on-click": "dwl-bar-action bluetooth",
+    "on-click-right": "dwl-bar-action bluetooth-cli"
+  },
+  "pulseaudio": {
+    "format": "\u2005{volume}%",
+    "format-muted": "󰝟",
+    "tooltip-format": "{desc}\nVolume: {volume}%\nClick: audio settings · middle-click: mute\nScroll: adjust volume",
+    "on-click": "pavucontrol",
+    "on-click-middle": "dwl-controls volume mute",
+    "on-scroll-up": "dwl-controls volume up",
+    "on-scroll-down": "dwl-controls volume down"
+  },
+  "custom/battery": {
+    "return-type": "json",
+    "interval": 30,
+    "on-click": "dwl-bar-action battery"
+  },
+  "custom/theme": {
+    "format": "󰔎",
+    "tooltip-format": "Switch light/dark theme",
+    "on-click": "dwl-bar-action theme"
+  }
+}

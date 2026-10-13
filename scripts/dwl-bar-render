@@ -1,0 +1,52 @@
+#!/usr/bin/env python3
+"""Render the shared Waybar config for an output, width, and status mode."""
+import json
+import os
+from pathlib import Path
+import shlex
+import sys
+
+config = Path(os.environ.get('DWL_CONFIG_DIR', Path.home() / '.config/dwl'))
+runtime = Path(os.environ.get('DWL_RUNTIME_DIR', Path(os.environ['XDG_RUNTIME_DIR']) / 'dwl'))
+monitor, width, mode = sys.argv[1], int(sys.argv[2]), sys.argv[3]
+bar = json.loads((config / 'waybar/config.json').read_text())
+bar['output'] = monitor
+tags = [f'custom/tag{i}' for i in range(1, 10)]
+bar['modules-left'] = ['group/dwl']
+bar['group/dwl'] = {'orientation': 'horizontal', 'modules': tags + ['custom/dwl']}
+runtime.mkdir(parents=True, exist_ok=True)
+for i, name in enumerate(tags, 1):
+    path = runtime / f'tag-{monitor}-{i}.json'
+    if not path.exists():
+        path.write_text(json.dumps({'text': str(i), 'class': ['tag'], 'tooltip': f'Tag {i}'}) + '\n')
+    action = str(config / 'scripts/dwl-bar-action')
+    bar[name] = {'return-type': 'json', 'exec': shlex.join(['tail', '-n', '1', '-F', '-s', '.1', str(path)]),
+                 'exec-on-event': False,
+                 'on-click': shlex.join([action, 'tag', str(i)]),
+                 'on-click-right': shlex.join([action, 'toggle-tag', str(i)])}
+bar['custom/dwl']['on-click'] = shlex.join([action, 'layout'])
+bar['custom/dwl']['on-click-right'] = shlex.join([action, 'monocle'])
+bar['custom/dwl']['on-click-middle'] = shlex.join([action, 'zoom'])
+compact = width < 1600
+if mode == 'mini':
+    bar['group/resources']['modules'] = [m for m in bar['group/resources']['modules'] if m not in ('cpu', 'memory')]
+if compact:
+    bar['clock']['format'] = '{:%d %b  %H:%M}'
+wifi = next((p.name for p in Path('/sys/class/net').iterdir() if (p / 'wireless').is_dir()), '')
+for name in ('dwl', 'music', 'disk', 'tailscale', 'caps', 'network'):
+    command = [str(config / 'scripts/dwl-bar-status'), '--waybar', name]
+    if name in ('dwl', 'music', 'caps', 'network'):
+        command.append('--watch')
+    if name == 'dwl':
+        command += ['--monitor', monitor, '--width', '12' if compact else '24']
+    if name == 'music':
+        size = 18 if compact else 30
+        command += ['--width', str(size)]
+        bar['custom/music']['min-length'] = 1
+        bar['custom/music']['max-length'] = size + 2
+    if name == 'network':
+        command += ['--interface', wifi]
+    bar['custom/' + name]['exec'] = shlex.join(command)
+bar['custom/battery']['exec'] = shlex.quote(str(config / 'scripts/dwl-battery'))
+runtime.mkdir(parents=True, exist_ok=True)
+(runtime / f'waybar-{monitor}.json').write_text(json.dumps(bar, indent=2) + '\n')

@@ -11,7 +11,13 @@ case ${1:-} in
 esac
 [ -f "$runtime/foot-$mode.conf" ] || "$config/scripts/dwl-render-theme" "$mode"
 font=$(sed -n 's/^font=//p' "$config/foot/foot.ini")
+while IFS= read -r override; do
+    set -- "--override=$override" "$@"
+done <<EOF
+$("$config/scripts/dwl-foot-colors" --overrides)
+EOF
+set -- "--override=initial-color-theme=$mode" "$@"
 if [ -S "$runtime/foot.sock" ]; then
     exec footclient --client-environment --server-socket="$runtime/foot.sock" --override="font=$font" "$@"
 fi
-exec foot --config="$runtime/foot-$mode.conf" --override="font=$font" "$@"
+exec foot --config="$runtime/foot.conf" --override="font=$font" "$@"

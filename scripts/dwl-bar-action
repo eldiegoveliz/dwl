@@ -2,8 +2,23 @@
 set -eu
 config=${DWL_CONFIG_DIR:-$HOME/.config/dwl}
 case ${1:-} in
+    tag|toggle-tag)
+        case ${2:-} in [1-9]) ;; *) exit 2 ;; esac
+        case "$1" in
+            tag) exec wtype -M logo -k "$2" -m logo ;;
+            toggle-tag) exec wtype -M logo -M ctrl -k "$2" -m ctrl -m logo ;;
+        esac ;;
+    layout) exec wtype -M logo -k space -m logo ;;
+    monocle) exec wtype -M logo -k m -m logo ;;
+    zoom) exec wtype -M logo -k Return -m logo ;;
     system) exec "$config/scripts/dwl-terminal" htop ;;
     network) exec "$config/scripts/dwl-terminal" iwctl ;;
+    bluetooth)
+        if command -v blueman-manager >/dev/null 2>&1; then
+            exec blueman-manager
+        fi
+        exec "$config/scripts/dwl-terminal" bluetoothctl ;;
+    bluetooth-cli) exec "$config/scripts/dwl-terminal" bluetoothctl ;;
     music) exec "$config/scripts/dwl-terminal" ncmpcpp ;;
     disk) exec "$config/scripts/dwl-terminal" sh -c 'df -h / /home; printf "\nPress Enter to close."; read -r reply' ;;
     tailscale) exec "$config/scripts/dwl-terminal" sh -c 'tailscale status; printf "\nPress Enter to close."; read -r reply' ;;

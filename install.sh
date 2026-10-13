@@ -22,20 +22,8 @@ privileged() {
 if [ "$action" = install ]; then
     privileged /usr/bin/pacman -S --needed --noconfirm foot fuzzel mako kanshi \
         scenefx wlroots0.20 swaybg wlr-randr grim slurp wl-clipboard jq gettext \
-        darkman htop pavucontrol upower xdg-user-dirs python patch base-devel playerctl mpc
-    if ! pacman -Q yambar >/dev/null 2>&1; then
-        privileged /usr/bin/pacman -S --needed --noconfirm meson ninja scdoc tllist
-        bar_cache=${XDG_CACHE_HOME:-$HOME/.cache}/dwl-config-install/yambar-aur
-        if [ ! -d "$bar_cache/.git" ]; then
-            git clone https://aur.archlinux.org/yambar.git "$bar_cache"
-        fi
-        git -C "$bar_cache" show HEAD:PKGBUILD > "$bar_cache/PKGBUILD"
-        sed -i '/--buildtype=release/a\        -Dwerror=false \\' "$bar_cache/PKGBUILD"
-        curl --fail --silent --show-error \
-            https://keys.openpgp.org/vks/v1/by-fingerprint/B19964FBBA09664CC81027ED5BBD4992C116573F | gpg --import
-        (cd "$bar_cache" && makepkg --force --cleanbuild)
-        privileged /usr/bin/pacman -U --noconfirm "$bar_cache"/yambar-[0-9]*.pkg.tar.zst
-    fi
+        darkman htop pavucontrol upower xdg-user-dirs python patch base-devel playerctl mpc waybar iw iproute2 \
+        bluez bluez-utils blueman wtype
 fi
 if [ "$action" != link ]; then
     "$repo/scripts/dwl-build"

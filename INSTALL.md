@@ -52,12 +52,24 @@ makoctl reload
 systemctl --user restart dwl-bar.service
 ```
 
+Bar modules and tooltips are in `waybar/config.json`; styling is in
+`waybar/style.css`. Restart `dwl-bar.service` after editing these files.
+Super+S shows CPU/RAM; Super+Shift+S hides them.
+
 New launcher windows use the regenerated config. Foot's `font=` setting applies
 to new windows immediately; existing windows support Ctrl+- / Ctrl++ / Ctrl+0.
-For changes to Foot's padding or palette definitions, close its terminal
-windows first, then run
-`systemctl --user restart dwl-terminal.service`. Use darkman's light/dark switch
-to change between the existing palettes without closing terminals.
+For changes to Foot's padding, close its terminal
+windows first, then run `systemctl --user restart dwl-terminal.service` to apply
+new padding. Colors and transparency can update in open terminals:
+
+```sh
+~/.config/dwl/scripts/dwl-theme "$(darkman get)"
+```
+
+This regenerates both palettes and sends Foot's documented color sequences to
+this session's terminal PTYs. It does not restart the Foot server. Darkman's
+light/dark switch uses the same path. To change the wallpaper, edit
+`wallpaper.conf` and restart `dwl-wallpaper.service`; Matugen colors refresh too.
 
 After editing monitor profiles, reload Kanshi:
 

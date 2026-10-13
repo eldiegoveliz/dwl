@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
-"""Live Yambar tags and controls for music, disk, Tailscale, and lock keys."""
+"""Waybar metadata and controls for MPRIS/MPD, disk, Tailscale, and dwl."""
+import argparse
+import html
 import json
+import os
 from pathlib import Path
 import re
 import shutil
 import signal
 import subprocess
-import sys
 import time
 
 signal.signal(signal.SIGINT, signal.SIG_DFL)
@@ -24,43 +26,166 @@ def clean(text):
     return ' '.join(re.sub(r'[\x00-\x1f\x7f]', ' ', text).split())
 
 
-def music():
+def media_players():
     players = []
     output = run('playerctl', '--all-players', 'metadata', '--format',
                  '{{playerName}}\t{{status}}\t{{artist}} — {{title}}')
     for line in output.splitlines():
         parts = line.split('\t', 2)
-        if len(parts) == 3 and parts[1] in ('Playing', 'Paused'):
+        if len(parts) == 3 and parts[1] in ('Playing', 'Paused', 'Stopped'):
             players.append((parts[1], clean(parts[2]).strip(' —'), parts[0]))
-    playing = next((p for p in players if p[0] == 'Playing'), None)
-    if playing:
-        return playing
-    output = run('mpc', '--format', '%artist% — %title%', 'status')
-    lines = output.splitlines()
-    state = next((line for line in lines if line.startswith('[playing]') or line.startswith('[paused]')), '')
+    lines = run('mpc', '--format', '%artist% — %title%', 'status').splitlines()
+    state = next((line for line in lines if line.startswith(('[playing]', '[paused]'))), '')
     if state:
-        mpd = ('Playing' if state.startswith('[playing]') else 'Paused', clean(lines[0]).strip(' —'), '@mpd')
-        if mpd[0] == 'Playing' or not players:
-            return mpd
-    return players[0] if players else ('Stopped', '', '')
+        players.append(('Playing' if state.startswith('[playing]') else 'Paused',
+                        clean(lines[0]).strip(' —'), '@mpd'))
+    else:
+        queued = clean(run('mpc', '--format', '%artist% — %title%', 'current')).strip(' —')
+        if queued:
+            players.append(('Stopped', queued, '@mpd'))
+    return players
+
+
+def audio_sources():
+    """Prefer player metadata, then enrich/fill it with active output streams."""
+    try:
+        streams = json.loads(run('pactl', '-f', 'json', 'list', 'sink-inputs') or '[]')
+    except ValueError:
+        streams = []
+    streams = [s for s in streams if not s.get('corked')]
+    def normalized(value):
+        return re.sub(r'[^a-z0-9]', '', value.casefold())
+    def stream_title(stream):
+        props = stream.get('properties', {})
+        title = clean(props.get('media.title') or props.get('window.name') or props.get('media.name', ''))
+        return '' if normalized(title) in ('audiostream', 'playback', 'audio') else title
+    sources, matched = [], set()
+    for state, title, player in media_players():
+        base = player.split('.', 1)[0]
+        names = {'mpd', 'musicplayerdaemon'} if player == '@mpd' else {normalized(base)}
+        matches = [s for s in streams if names & {
+            normalized(s.get('properties', {}).get('application.name', '')),
+            normalized(Path(s.get('properties', {}).get('application.process.binary', '')).name.removesuffix('-bin'))}]
+        app = matches[0].get('properties', {}).get('application.name') if matches else None
+        title = title or next((stream_title(s) for s in matches if stream_title(s)), '')
+        title = title or clean(app or ('MPD' if player == '@mpd' else base))
+        # Keep distinct titled streams from the same app (e.g. two browser tabs).
+        matched.update(s['index'] for s in matches if len(matches) == 1 or not stream_title(s)
+                       or normalized(stream_title(s)) == normalized(app or '')
+                       or title == stream_title(s) or title.endswith(' — ' + stream_title(s)))
+        sources.append({'state': state, 'title': title, 'player': player,
+                        'app': clean(app or ('MPD' if player == '@mpd' else base)),
+                        'muted': bool(matches) and all(s.get('mute') for s in matches)})
+    for stream in streams:
+        if stream['index'] in matched:
+            continue
+        props = stream.get('properties', {})
+        app = clean(props.get('application.name') or props.get('application.process.binary') or 'Audio app')
+        title = stream_title(stream) or app
+        artist = clean(props.get('media.artist', ''))
+        sources.append({'state': 'Playing', 'title': f'{artist} — {title}' if artist else title,
+                        'player': f'@stream:{stream["index"]}', 'app': app,
+                        'muted': bool(stream.get('mute'))})
+    def priority(source):
+        state = source['state']
+        rank = (1 if source['player'].startswith('@stream:') else 0) if state == 'Playing' else (2 if state == 'Paused' else 3)
+        return source['muted'], rank
+    return sorted(sources, key=priority)
+
+
+def music():
+    sources = audio_sources()
+    return (sources[0]['state'], sources[0]['title'], sources[0]['player']) if sources else ('Stopped', '', '')
+
+
+def music_action(action):
+    state, title, player = music()
+    if player.startswith('@stream:'):
+        if action == 'play-pause':
+            subprocess.Popen(['pavucontrol'], stdin=subprocess.DEVNULL,
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                             start_new_session=True)
+    elif player == '@mpd':
+        run('mpc', {'play-pause': 'toggle', 'next': 'next', 'previous': 'prev'}[action])
+    elif player:
+        run('playerctl', '--player', player, action)
+    elif action == 'play-pause':
+        config = Path(os.environ.get('DWL_CONFIG_DIR', Path.home() / '.config/dwl'))
+        subprocess.Popen([str(config / 'scripts/dwl-bar-action'), 'music'],
+                         stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                         stderr=subprocess.DEVNULL, start_new_session=True)
 
 
 def tailscale():
-    output = run('tailscale', 'status', '--json')
     try:
-        status = json.loads(output)
-    except (ValueError, TypeError):
-        return {'tailscale_text': 'TS ?', 'tailscale_online': False, 'tailscale_warning': True}
+        status = json.loads(run('tailscale', 'status', '--json'))
+    except ValueError:
+        return {'text': 'TS ?', 'class': 'warning', 'tooltip': 'Tailscale status unavailable\nClick for details'}
     online = status.get('BackendState') == 'Running' and status.get('Self', {}).get('Online', False)
-    peers = sum(bool(p.get('Online')) for p in (status.get('Peer') or {}).values())
-    label = str(peers) if online else ('off' if status.get('BackendState') == 'Stopped' else 'offline')
-    return {'tailscale_text': f'TS {label}', 'tailscale_online': bool(online),
-            'tailscale_warning': bool(status.get('Health'))}
+    peers = [p for p in (status.get('Peer') or {}).values() if p.get('Online')]
+    label = str(len(peers)) if online else ('off' if status.get('BackendState') == 'Stopped' else 'offline')
+    details = ['Tailscale: ' + status.get('BackendState', 'Unknown')]
+    details.extend((status.get('Self') or {}).get('TailscaleIPs') or [])
+    details.append(f'{len(peers)} peers online')
+    details.extend(p.get('HostName', p.get('DNSName', '?')) for p in peers)
+    details.extend(status.get('Health') or [])
+    details.append('Click for full status')
+    return {'text': f'TS {label}', 'class': 'warning' if status.get('Health') else ('online' if online else 'offline'),
+            'tooltip': html.escape('\n'.join(details))}
 
 
 def disk():
     usage = shutil.disk_usage(Path.home())
-    return {'disk_text': f'󰋊 {usage.free / 2**30:.0f}G', 'disk_low': usage.free / usage.total < 0.1}
+    return {'text': f'󰋊\u2005{usage.free / 2**30:.0f}G',
+            'class': 'low' if usage.free / usage.total < 0.1 else 'normal',
+            'tooltip': html.escape(f'Home filesystem\n{usage.free / 2**30:.1f} GiB free of {usage.total / 2**30:.1f} GiB\n'
+                                  f'{usage.used / usage.total:.0%} used\nClick for disk usage')}
+
+
+def amount(value, suffix='B'):
+    for unit in ('', 'Ki', 'Mi', 'Gi'):
+        if value < 1024 or unit == 'Gi':
+            return f'{value:.1f} {unit}{suffix}'
+        value /= 1024
+
+
+def network(interface, previous):
+    path = Path('/sys/class/net') / interface
+    now = time.monotonic()
+    try:
+        received = int((path / 'statistics/rx_bytes').read_text())
+        sent = int((path / 'statistics/tx_bytes').read_text())
+        carrier = (path / 'carrier').read_text().strip() == '1'
+    except OSError:
+        return {'text': '󰤭', 'class': 'disconnected', 'tooltip': 'Wi-Fi unavailable\nClick to open iwctl'}, None
+    sample = (now, received, sent)
+    if not carrier:
+        return {'text': '󰤭', 'class': 'disconnected', 'tooltip': 'Wi-Fi disconnected\nClick to open iwctl'}, sample
+    rx, tx = (0, 0) if previous is None else (
+        max(0, received - previous[1]) / (now - previous[0]),
+        max(0, sent - previous[2]) / (now - previous[0]))
+    link = {}
+    for line in run('iw', 'dev', interface, 'link').splitlines():
+        if ':' in line:
+            key, value = line.strip().split(':', 1)
+            link[key] = value.strip()
+    addresses = json.loads(run('ip', '-j', 'address', 'show', 'dev', interface) or '[]')
+    ips = [f'{a["local"]}/{a["prefixlen"]}' for p in addresses for a in p.get('addr_info', [])
+           if a.get('scope') == 'global']
+    routes = json.loads(run('ip', '-j', 'route', 'show', 'default', 'dev', interface) or '[]')
+    gateway = next((r['gateway'] for r in routes if r.get('gateway')), 'none')
+    details = [link.get('SSID', 'Wi-Fi connected')]
+    if link.get('signal'):
+        details.append('Signal: ' + link['signal'])
+    if link.get('freq'):
+        details.append(f'Frequency: {float(link["freq"]) / 1000:.2f} GHz')
+    for key in ('rx bitrate', 'tx bitrate'):
+        if key in link:
+            details.append(f'Link {key[:2].upper()}: ' + link[key].split(' VHT')[0].split(' HE')[0])
+    details += [f'Interface: {interface}', 'Address: ' + (', '.join(ips) or 'pending'),
+                f'Gateway: {gateway}', f'Activity: ↓ {amount(rx, "B/s")}   ↑ {amount(tx, "B/s")}',
+                f'Transferred: ↓ {amount(received)}   ↑ {amount(sent)}', 'Click to open iwctl']
+    return {'text': '', 'class': 'wifi' if ips else 'linked', 'tooltip': html.escape('\n'.join(details))}, sample
 
 
 def caps_lock():
@@ -73,41 +198,142 @@ def caps_lock():
     return False
 
 
-def emit(tags):
-    for name, value in tags.items():
-        kind = 'bool' if isinstance(value, bool) else 'string'
-        print(f'{name}|{kind}|{str(value).lower() if kind == "bool" else clean(value)}')
-    print(flush=True)
-
-
-if sys.argv[1:2] == ['--music']:
-    state, title, player = music()
-    action = sys.argv[2] if len(sys.argv) > 2 else 'play-pause'
-    if action not in ('play-pause', 'next', 'previous'):
-        raise SystemExit(2)
-    if player == '@mpd':
-        run('mpc', {'play-pause': 'toggle', 'next': 'next', 'previous': 'prev'}[action])
+def music_display(track, width, step=0, sources=None):
+    state, title, player = track
+    visible = title or 'Nothing playing'
+    # Hold the start for three ticks, then move one character per tick.
+    if len(visible) > width:
+        if state == 'Playing':
+            offset = max(0, step - 3) % (len(visible) + 3)
+            ring = visible + '   ' + visible
+            visible = ring[offset:offset + width]
+        else:
+            visible = visible[:width - 1] + '…'
+    stream = player.startswith('@stream:')
+    icon = '' if stream else ('' if state == 'Playing' else ('' if player else ''))
+    if player:
+        visible = visible.ljust(width)
+    details = [title or 'Nothing playing']
+    if sources:
+        details += ['', 'Audio sources:']
+        for source in sources:
+            status = source['state'] + (' · muted' if source['muted'] else '')
+            label = source['app']
+            if source['title'] and source['title'] != label:
+                label += ': ' + source['title']
+            details.append(f'{label} ({status})')
     elif player:
-        run('playerctl', '--player', player, action)
-    raise SystemExit(0)
+        details.append(f'{state} · {"MPD" if player == "@mpd" else player}')
+    if stream:
+        details += ['', 'Click: open audio mixer', 'This app does not report playback controls']
+    elif player:
+        details += ['', 'Click: play/pause · scroll: change track', 'Right-click: open ncmpcpp']
+    else:
+        details += ['Click to open ncmpcpp']
+    tooltip = '\n'.join(details)
+    return {'text': html.escape(f'{icon} {visible}'), 'tooltip': html.escape(tooltip),
+            'class': 'output' if stream else state.lower() if player else 'idle'}
 
-watch = '--watch' in sys.argv
-tags, updated, previous = {}, {}, None
-while True:
-    now = time.monotonic()
-    for name, interval, getter in [('disk', 30, disk), ('tailscale', 15, tailscale)]:
-        if now - updated.get(name, -float('inf')) >= interval:
-            tags.update(getter())
-            updated[name] = now
-    if now - updated.get('music', -float('inf')) >= 3:
-        state, title, player = music()
-        tags.update(music_text=f'{"" if state == "Playing" else ""} {title}' if title else ' idle',
-                    music_playing=state == 'Playing')
-        updated['music'] = now
-    tags['caps_lock'] = caps_lock()
-    if tags != previous:
-        emit(tags)
-        previous = tags.copy()
-    if not watch:
-        break
-    time.sleep(1)
+
+def dwl_display(state, width):
+    title = clean(state.get('title', ''))
+    visible = title if len(title) <= width else title[:width - 1] + '…'
+    layout = clean(state.get('layout', '[]='))
+    return {'text': html.escape(layout + '  ' + visible),
+            'tooltip': html.escape(f'{title or "Empty tag"}\nClick: cycle layout · right-click: monocle\nMiddle-click: promote focused window to master'),
+            'class': 'focused' if state.get('selmon') == '1' else 'unfocused'}
+
+
+def watch_dwl(args):
+    path = Path(os.environ.get('DWL_INFO', Path(os.environ['XDG_RUNTIME_DIR']) / 'dwl/status'))
+    tag_runtime = Path(os.environ.get('DWL_RUNTIME_DIR', Path(os.environ['XDG_RUNTIME_DIR']) / 'dwl'))
+    state, pending, position, previous, identity = {}, b'', 0, None, None
+    previous_tags = {}
+    while True:
+        try:
+            stat = path.stat()
+            current_identity = (stat.st_dev, stat.st_ino)
+            if current_identity != identity or stat.st_size < position:
+                state, pending = {}, b''
+                position = max(0, stat.st_size - 65536)
+                identity = current_identity
+            with path.open('rb') as stream:
+                stream.seek(position)
+                chunk = stream.read()
+                position = stream.tell()
+            lines = (pending + chunk).split(b'\n')
+            pending = lines.pop()
+            for line in lines:
+                parts = line.decode('utf-8', errors='replace').split(' ', 2)
+                if len(parts) == 3 and parts[0] == args.monitor:
+                    state[parts[1]] = parts[2]
+        except FileNotFoundError:
+            state, position, pending, identity = {}, 0, b'', None
+        occupied, selected, focused, urgent = (int(n) for n in state.get('tags', '0 1 0 0').split())
+        for i in range(1, 10):
+            bit = 1 << (i - 1)
+            classes = ['tag'] + [name for name, mask in (
+                ('occupied', occupied), ('selected', selected), ('urgent', urgent)) if mask & bit]
+            tag = {'text': f'<span underline="single">{i}</span>' if selected & bit else str(i),
+                   'class': classes, 'tooltip': f'Tag {i}\nClick: switch · right-click: toggle alongside current tags'}
+            if tag != previous_tags.get(i):
+                target = tag_runtime / f'tag-{args.monitor}-{i}.json'
+                with target.open('a') as stream:
+                    stream.write(json.dumps(tag) + '\n')
+                previous_tags[i] = tag
+        result = dwl_display(state, args.width)
+        if result != previous:
+            print(json.dumps(result), flush=True)
+            previous = result
+        if not args.watch:
+            return
+        time.sleep(.2)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--music', choices=('play-pause', 'next', 'previous'))
+    parser.add_argument('--waybar', choices=('music', 'disk', 'tailscale', 'caps', 'dwl', 'network'), default='music')
+    parser.add_argument('--watch', action='store_true')
+    parser.add_argument('--width', type=int, default=24)
+    parser.add_argument('--monitor', default='')
+    parser.add_argument('--interface', default='')
+    args = parser.parse_args()
+    if args.width < 2:
+        parser.error('--width must be at least 2')
+    if args.music:
+        music_action(args.music)
+        return
+    if args.waybar == 'dwl':
+        watch_dwl(args)
+        return
+    track, changed, updated, previous, result, sample, sources = None, 0, -float('inf'), None, None, None, []
+    while True:
+        now = time.monotonic()
+        if args.waybar == 'music':
+            if now - updated >= 2:
+                sources = audio_sources()
+                current = (sources[0]['state'], sources[0]['title'], sources[0]['player']) if sources else ('Stopped', '', '')
+                if current != track:
+                    track, changed = current, now
+                updated = now
+            result = music_display(track, args.width, int((now - changed) / .7), sources)
+        elif args.waybar == 'caps':
+            result = {'text': 'CAPS' if caps_lock() else '', 'tooltip': 'Caps Lock is on', 'class': 'on'}
+        elif args.waybar == 'network':
+            if now - updated >= 2:
+                result, sample = network(args.interface, sample)
+                updated = now
+        elif now - updated >= (30 if args.waybar == 'disk' else 15):
+            result = disk() if args.waybar == 'disk' else tailscale()
+            updated = now
+        if result != previous:
+            print(json.dumps(result), flush=True)
+            previous = result
+        if not args.watch:
+            return
+        time.sleep(.7 if args.waybar == 'music' else 1)
+
+
+if __name__ == '__main__':
+    main()

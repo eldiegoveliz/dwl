@@ -10,6 +10,7 @@ trap 'rm -rf "$workdir"' EXIT
 for palette in dark light; do
     set -a
     . "$config/theme/$palette.conf"
+    . "$("$config/scripts/dwl-palette" "$palette")"
     set +a
     envsubst < "$config/foot/foot.ini" > "$workdir/foot-$palette.conf"
 done
@@ -18,6 +19,7 @@ sed -n '/^\[colors-dark\]/,$p' "$workdir/foot-light.conf" | \
     sed 's/^\[colors-dark\]/[colors-light]/' >> "$workdir/foot.conf"
 set -a
 . "$config/theme/$mode.conf"
+. "$("$config/scripts/dwl-palette" "$mode")"
 set +a
 for app in fuzzel mako; do
     case "$app" in mako) template=config ;; *) template=$app.ini ;; esac
