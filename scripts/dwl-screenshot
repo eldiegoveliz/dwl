@@ -1,7 +1,6 @@
 #!/bin/sh
 set -eu
-pictures_dir=$(xdg-user-dir PICTURES 2>/dev/null || printf '%s/pictures' "$HOME")
-output_dir=$pictures_dir/Screenshots
+output_dir=$HOME/pictures/Screenshots
 mkdir -p "$output_dir"
 output=$output_dir/screenshot-$(date '+%Y%m%d-%H%M%S-%N').png
 case ${1:-} in
