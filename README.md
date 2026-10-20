@@ -36,11 +36,13 @@ Music sits at the center of the screen; date and time sit at the far right.
 Resources, connectivity, and audio/power indicators form separate groups.
 Music uses MPRIS players (including browsers) with MPD as a fallback. Click the
 song to play/pause, use the adjacent previous/next buttons, or scroll to change
-tracks. Long titles scroll while playing; hover lists all reported audio sources.
+tracks. The centered group fits its title, up to the display's title limit.
+Long titles scroll while playing; hover lists all reported audio sources.
 Apps without MPRIS use their active output-stream title, or their app name when
 no title is supplied. Clicking these sources opens the audio mixer. Their
-previous/next controls are unavailable because the app supplies no transport controls.
+previous/next controls are hidden because the app supplies no transport controls.
 Right-click to open ncmpcpp. When no player is available, clicking opens ncmpcpp.
+With no audio source, the center shows only an em dash.
 Wi-Fi shows an icon; hover shows the network name, signal, IP, gateway, and live
 download/upload rates. CPU and RAM use icons in full mode with details on hover. Disk
 shows available space on the home filesystem and turns red below 10% free.

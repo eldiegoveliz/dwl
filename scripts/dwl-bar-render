@@ -27,6 +27,11 @@ for i, name in enumerate(tags, 1):
 bar['custom/dwl']['on-click'] = shlex.join([action, 'layout'])
 bar['custom/dwl']['on-click-right'] = shlex.join([action, 'monocle'])
 bar['custom/dwl']['on-click-middle'] = shlex.join([action, 'zoom'])
+for control in ('prev', 'next'):
+    path = runtime / f'music-{monitor}-{control}.json'
+    if not path.exists():
+        path.write_text(json.dumps({'text': ''}) + '\n')
+    bar[f'custom/music-{control}']['exec'] = shlex.join(['tail', '-n', '1', '-F', '-s', '.1', str(path)])
 compact = width < 1600
 if mode == 'mini':
     bar['group/resources']['modules'] = [m for m in bar['group/resources']['modules'] if m not in ('cpu', 'memory')]
@@ -41,7 +46,7 @@ for name in ('dwl', 'music', 'disk', 'tailscale', 'caps', 'network'):
         command += ['--monitor', monitor, '--width', '12' if compact else '24']
     if name == 'music':
         size = 18 if compact else 30
-        command += ['--width', str(size)]
+        command += ['--monitor', monitor, '--width', str(size)]
         bar['custom/music']['min-length'] = 1
         bar['custom/music']['max-length'] = size + 2
     if name == 'network':

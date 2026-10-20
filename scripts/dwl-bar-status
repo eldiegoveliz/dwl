@@ -200,7 +200,7 @@ def caps_lock():
 
 def music_display(track, width, step=0, sources=None):
     state, title, player = track
-    visible = title or 'Nothing playing'
+    visible = title or '—'
     # Hold the start for three ticks, then move one character per tick.
     if len(visible) > width:
         if state == 'Playing':
@@ -211,8 +211,6 @@ def music_display(track, width, step=0, sources=None):
             visible = visible[:width - 1] + '…'
     stream = player.startswith('@stream:')
     icon = '' if stream else ('' if state == 'Playing' else ('' if player else ''))
-    if player:
-        visible = visible.ljust(width)
     details = [title or 'Nothing playing']
     if sources:
         details += ['', 'Audio sources:']
@@ -231,7 +229,7 @@ def music_display(track, width, step=0, sources=None):
     else:
         details += ['Click to open ncmpcpp']
     tooltip = '\n'.join(details)
-    return {'text': html.escape(f'{icon} {visible}'), 'tooltip': html.escape(tooltip),
+    return {'text': html.escape(f'{icon} {visible}' if player else '—'), 'tooltip': html.escape(tooltip),
             'class': 'output' if stream else state.lower() if player else 'idle'}
 
 
@@ -308,6 +306,7 @@ def main():
         watch_dwl(args)
         return
     track, changed, updated, previous, result, sample, sources = None, 0, -float('inf'), None, None, None, []
+    previous_controls = None
     while True:
         now = time.monotonic()
         if args.waybar == 'music':
@@ -317,6 +316,13 @@ def main():
                 if current != track:
                     track, changed = current, now
                 updated = now
+                controls = bool(track[2]) and not track[2].startswith('@stream:')
+                if args.watch and args.monitor and controls != previous_controls:
+                    runtime = Path(os.environ.get('DWL_RUNTIME_DIR', Path(os.environ['XDG_RUNTIME_DIR']) / 'dwl'))
+                    for action, icon in (('prev', '󰒮'), ('next', '󰒭')):
+                        with (runtime / f'music-{args.monitor}-{action}.json').open('a') as stream:
+                            stream.write(json.dumps({'text': icon if controls else ''}) + '\n')
+                    previous_controls = controls
             result = music_display(track, args.width, int((now - changed) / .7), sources)
         elif args.waybar == 'caps':
             result = {'text': 'CAPS' if caps_lock() else '', 'tooltip': 'Caps Lock is on', 'class': 'on'}

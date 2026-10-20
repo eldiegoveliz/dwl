@@ -41,12 +41,16 @@
     "modules": ["custom/music-prev", "custom/music", "custom/music-next"]
   },
   "custom/music-prev": {
-    "format": "󰒮",
+    "return-type": "json",
+    "hide-empty-text": true,
+    "exec-on-event": false,
     "tooltip-format": "Previous track",
     "on-click": "dwl-bar-status --music previous"
   },
   "custom/music": {
     "return-type": "json",
+    "align": 0.5,
+    "justify": "center",
     "exec-on-event": false,
     "restart-interval": 2,
     "on-click": "dwl-bar-status --music play-pause",
@@ -55,7 +59,9 @@
     "on-scroll-down": "dwl-bar-status --music previous"
   },
   "custom/music-next": {
-    "format": "󰒭",
+    "return-type": "json",
+    "hide-empty-text": true,
+    "exec-on-event": false,
     "tooltip-format": "Next track",
     "on-click": "dwl-bar-status --music next"
   },
