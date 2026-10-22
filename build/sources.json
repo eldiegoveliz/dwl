@@ -1,9 +1,9 @@
 {
-  "version": "0.9.rice2",
+  "version": "0.9.rice3",
   "upstream_commit": "f1675a480067b956a551785148af545f80cb6306",
   "upstream_url": "https://codeberg.org/dwl/dwl/archive/f1675a480067b956a551785148af545f80cb6306.tar.gz",
   "upstream_sha256": "46d33e98b123cee9cd23fddd6794f926f1235a005fb46e0f5f1957837fcd804e",
-  "local_patches": ["layer-blur.patch", "attach-below.patch"],
+  "local_patches": ["layer-blur.patch", "attach-below.patch", "center-dialogs.patch"],
   "patches": [
     {
       "name": "blur.patch",

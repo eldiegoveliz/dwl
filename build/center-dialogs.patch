@@ -1,0 +1,15 @@
+--- a/dwl.c
++++ b/dwl.c
+@@ -1999,6 +1999,12 @@
+ 	if ((p = client_get_parent(c))) {
+ 		c->isfloating = 1;
+ 		setmon(c, p->mon, p->tags);
++		/* Center new dialogs in their parent's monitor work area. */
++		if (c->mon) {
++			c->geom.x = c->mon->w.x + MAX(0, (c->mon->w.width - c->geom.width) / 2);
++			c->geom.y = c->mon->w.y + MAX(0, (c->mon->w.height - c->geom.height) / 2);
++			resize(c, c->geom, 0);
++		}
+ 	} else {
+ 		applyrules(c);
+ 	}

@@ -6,7 +6,7 @@ mode and translucent gray in light mode. All four use real
 background blur.
 Blur samples the cached wallpaper to keep GPU work modest.
 
-This repository contains configuration, session helpers, an installer, and two
+This repository contains configuration, session helpers, an installer, and three
 small patches for layer-surface blur and window placement. Upstream compositor
 source and downloaded community patches stay in `~/.cache/dwl-config-install/rice`.
 
@@ -31,6 +31,7 @@ windows. The default bar hides CPU/RAM; full mode restores them. Battery status
 combines both packs by stored energy rather than averaging their percentages.
 New windows appear after the focused tiled window, preserving the existing
 master. Opening from a floating window appends to the stack.
+New app dialogs open centered in their parent app's monitor, below the bar.
 
 Music sits at the center of the screen; date and time sit at the far right.
 Resources, connectivity, and audio/power indicators form separate groups.
@@ -112,7 +113,18 @@ opens iwctl. Middle-click audio to mute. Scroll audio to adjust volume.
 and Mako, including transparency masks and the global blur toggle.
 `build/attach-below.patch` restores dwm's insertion order without changing the
 focus order or the Super+Enter action that promotes a window to master.
+`build/center-dialogs.patch` centers newly mapped dialogs in the work area of
+their parent app's monitor.
 
 The installer verifies download hashes, applies the patches, copies `config.h`,
 builds a pacman-owned `dwl` package, and checks that XWayland is disabled.
 See [INSTALL.md](INSTALL.md) to install or rebuild.
+
+To check dialog placement on two isolated headless displays, run:
+
+```sh
+python tests/check-dialog-centering.py ~/.cache/dwl-config-install/rice/upstream/dwl/dwl
+```
+
+The check uses GTK 3 Python bindings, Pillow, Waybar, wlr-randr, wtype, grim,
+and `/dev/dri/renderD128`. It saves screenshots and logs in the build cache.

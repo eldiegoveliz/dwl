@@ -123,7 +123,11 @@ static const char *ncmpcppcmd[] = { "dwl-terminal", "-e", "ncmpcpp", NULL };
 static const char *firefoxnightlycmd[] = { "firefox-nightly", NULL };
 static const char *t3codecmd[] = { "t3code-nightly", "--ozone-platform=wayland", NULL };
 static const char *lfcmd[] = { "dwl-terminal", "-e", "lf", NULL };
-static const char *bluetcmd[] = { "blueman-manager", NULL };
+static const char *bluetcmd[] = {
+    "sh", "-c",
+    "if bluetoothctl show | grep -q 'Powered: yes'; then bluetoothctl power off; else bluetoothctl power on; fi",
+    NULL
+};
 static const char *calcmd[] = { "dwl-terminal", "-e", "calcurse", NULL };
 static const char *localccmd[] = { "localc", NULL };
 static const char *scrotcmd[] = { "dwl-screenshot", "full", NULL };
@@ -157,18 +161,18 @@ static const Key keys[] = {
 	{ MODKEY,                       XKB_KEY_l,      setmfact,       {.f = +0.05f} },
 	{ MODKEY,                       XKB_KEY_Return, zoom,           {0} },
 	{ MODKEY,                       XKB_KEY_Tab,    view,           {0} },
-	{ MODKEY|WLR_MODIFIER_SHIFT,             XKB_KEY_c,      killclient,     {0} },
+	{ MODKEY|WLR_MODIFIER_SHIFT,    XKB_KEY_c,      killclient,     {0} },
 	{ MODKEY,                       XKB_KEY_t,      setlayout,      {.v = &layouts[0]} },
 	{ MODKEY,                       XKB_KEY_f,      setlayout,      {.v = &layouts[1]} },
 	{ MODKEY,                       XKB_KEY_m,      setlayout,      {.v = &layouts[2]} },
 	{ MODKEY,                       XKB_KEY_space,  setlayout,      {0} },
-	{ MODKEY|WLR_MODIFIER_SHIFT,             XKB_KEY_space,  togglefloating, {0} },
+	{ MODKEY|WLR_MODIFIER_SHIFT,    XKB_KEY_space,  togglefloating, {0} },
 	{ MODKEY,                       XKB_KEY_0,      view,           {.ui = ~0 } },
-	{ MODKEY|WLR_MODIFIER_SHIFT,             XKB_KEY_0,      tag,            {.ui = ~0 } },
+	{ MODKEY|WLR_MODIFIER_SHIFT,    XKB_KEY_0,      tag,            {.ui = ~0 } },
 	{ MODKEY,                       XKB_KEY_comma,  focusmon,       {.i = WLR_DIRECTION_LEFT } },
 	{ MODKEY,                       XKB_KEY_period, focusmon,       {.i = WLR_DIRECTION_RIGHT } },
-	{ MODKEY|WLR_MODIFIER_SHIFT,             XKB_KEY_comma,  tagmon,         {.i = WLR_DIRECTION_LEFT } },
-	{ MODKEY|WLR_MODIFIER_SHIFT,             XKB_KEY_period, tagmon,         {.i = WLR_DIRECTION_RIGHT } },
+	{ MODKEY|WLR_MODIFIER_SHIFT,    XKB_KEY_comma,  tagmon,         {.i = WLR_DIRECTION_LEFT } },
+	{ MODKEY|WLR_MODIFIER_SHIFT,    XKB_KEY_period, tagmon,         {.i = WLR_DIRECTION_RIGHT } },
 	TAGKEYS(                        XKB_KEY_1,                      0),
 	TAGKEYS(                        XKB_KEY_2,                      1),
 	TAGKEYS(                        XKB_KEY_3,                      2),
@@ -183,18 +187,18 @@ static const Key keys[] = {
 	{ 0, XKB_KEY_XF86AudioLowerVolume, spawn, {.v = downvol } },
 	{ 0, XKB_KEY_XF86AudioMute,        spawn, {.v = mutevol } },
 	{ MODKEY, XKB_KEY_XF86AudioRaiseVolume, spawn, {.v = upvol } },
-	{ MODKEY,                       XKB_KEY_s,      spawn,          {.v = slfull } },
-	{ MODKEY|WLR_MODIFIER_SHIFT,             XKB_KEY_s,      spawn,          {.v = slmini } },
-	{ MODKEY|WLR_MODIFIER_SHIFT,             XKB_KEY_d,      spawn,          {.v = monitortoggle } },
-	{ MODKEY|WLR_MODIFIER_SHIFT,             XKB_KEY_m,      spawn,          {.v = ncmpcppcmd } },
+	{ MODKEY,                       	XKB_KEY_s,      spawn,          {.v = slfull } },
+	{ MODKEY|WLR_MODIFIER_SHIFT,            XKB_KEY_s,      spawn,          {.v = slmini } },
+	{ MODKEY|WLR_MODIFIER_SHIFT,            XKB_KEY_d,      spawn,          {.v = monitortoggle } },
+	{ MODKEY|WLR_MODIFIER_SHIFT,            XKB_KEY_m,      spawn,          {.v = ncmpcppcmd } },
 	{ MODKEY|WLR_MODIFIER_SHIFT, 		XKB_KEY_t,	   spawn, 	   {.v = t3codecmd } },
-	{ MODKEY|WLR_MODIFIER_SHIFT,             XKB_KEY_f,      spawn,          {.v = firefoxnightlycmd } },
-	{ MODKEY,                       XKB_KEY_e,      spawn,          {.v = lfcmd } },
-	{ MODKEY|WLR_MODIFIER_SHIFT,             XKB_KEY_b,      spawn,          {.v = bluetcmd } },
-	{ MODKEY,                       XKB_KEY_Print,  spawn,          {.v = scrotcmd } },
-	{ MODKEY|WLR_MODIFIER_SHIFT,             XKB_KEY_Print,  spawn,          {.v = scrotsel } },
-	{ MODKEY,                       XKB_KEY_c,      spawn,          {.v = calcmd } },
-	{ MODKEY|WLR_MODIFIER_SHIFT,             XKB_KEY_l,      spawn,          {.v = localccmd } },
+	{ MODKEY|WLR_MODIFIER_SHIFT,            XKB_KEY_f,      spawn,          {.v = firefoxnightlycmd } },
+	{ MODKEY,                       	XKB_KEY_e,      spawn,          {.v = lfcmd } },
+	{ MODKEY|WLR_MODIFIER_SHIFT,            XKB_KEY_b,      spawn,          {.v = bluetcmd } },
+	{ MODKEY,                       	XKB_KEY_Print,  spawn,          {.v = scrotcmd } },
+	{ MODKEY|WLR_MODIFIER_SHIFT,            XKB_KEY_Print,  spawn,          {.v = scrotsel } },
+	{ MODKEY,                       	XKB_KEY_c,      spawn,          {.v = calcmd } },
+	{ MODKEY|WLR_MODIFIER_SHIFT,            XKB_KEY_l,      spawn,          {.v = localccmd } },
 	{ MODKEY|WLR_MODIFIER_CTRL|WLR_MODIFIER_SHIFT, XKB_KEY_Prior,  zoom,           {.f = +1} },
 	{ MODKEY|WLR_MODIFIER_CTRL|WLR_MODIFIER_SHIFT, XKB_KEY_Next,   zoom,           {.f = -1} },
 	{ 0,                            XKB_KEY_XF86MonBrightnessUp,   spawn, {.v = brupcmd } },
