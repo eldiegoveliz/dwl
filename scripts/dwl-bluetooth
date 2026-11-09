@@ -1,0 +1,26 @@
+#!/bin/sh
+set -eu
+export LC_ALL=C
+
+powered() {
+    bluetoothctl show | grep -q 'Powered: yes'
+}
+
+if powered; then
+    exec bluetoothctl power off
+fi
+
+bluetoothctl power on
+# Keep discovery alive long enough to find nearby paired devices.
+bluetoothctl --timeout 8 scan on || :
+
+bluetoothctl devices Paired | while read -r kind address name; do
+    [ "$kind" = Device ] || continue
+    # Another press may have turned Bluetooth off during discovery/connection.
+    powered || exit 0
+    if bluetoothctl info "$address" | grep -q 'Connected: yes'; then
+        continue
+    fi
+    # An unavailable device must not prevent the others from reconnecting.
+    bluetoothctl --timeout 5 connect "$address" || :
+done

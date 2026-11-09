@@ -51,6 +51,9 @@ shows available space on the home filesystem and turns red below 10% free.
 Bluetooth shows power/connection state; hover lists connected devices and
 battery levels when supplied. Click to open Blueman, or right-click for
 bluetoothctl in a terminal. The bar displays the adapter's existing power state.
+Super+Shift+B toggles Bluetooth. Turning it on scans for eight seconds, then
+tries to reconnect paired devices, skipping those already connected. Turning
+it off only powers down the adapter.
 CAPS appears only while Caps Lock is enabled. Song and window titles occupy less
 space on smaller displays to leave room for the right-side indicators.
 

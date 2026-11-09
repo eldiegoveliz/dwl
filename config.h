@@ -123,11 +123,7 @@ static const char *ncmpcppcmd[] = { "dwl-terminal", "-e", "ncmpcpp", NULL };
 static const char *firefoxcmd[] = { "firefox", NULL };
 static const char *t3codecmd[] = { "t3code-nightly", "--ozone-platform=wayland", NULL };
 static const char *lfcmd[] = { "dwl-terminal", "-e", "lf", NULL };
-static const char *bluetcmd[] = {
-    "sh", "-c",
-    "if bluetoothctl show | grep -q 'Powered: yes'; then bluetoothctl power off; else bluetoothctl power on; fi",
-    NULL
-};
+static const char *bluetcmd[] = { "dwl-bluetooth", NULL };
 static const char *calcmd[] = { "dwl-terminal", "-e", "calcurse", NULL };
 static const char *localccmd[] = { "localc", NULL };
 static const char *scrotcmd[] = { "dwl-screenshot", "full", NULL };
